@@ -8,4 +8,3 @@ Tasks
     - Thumbnail generation
         - output stored in minio storage
 
-
