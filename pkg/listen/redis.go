@@ -3,6 +3,8 @@ package listen
 import (
 	"fmt"
 	"github.com/go-redis/redis"
+	"log"
+	"sync"
 )
 
 type RedisListen struct {
@@ -27,26 +29,22 @@ func (n *RedisListen) Init(config map[string]string) error {
 func (n *RedisListen) Subscribe() error {
 	fmt.Println("Subscribe to events on model")
 
+	var wg sync.WaitGroup
+
 	// ONE GO ROUTINE ONLY
+	wg.Add(1)
 	go func() {
-		pubSub := n.client.Subscribe(
-			n.queue,
-		)
+		defer wg.Done()
+
+		pubSub := n.client.Subscribe(n.queue)
+		defer pubSub.Close()
 		// ONE FOR ONLY
 		for {
 			msg, _ := pubSub.ReceiveMessage()
-			switch msg.Channel {
-			case n.queue:
-				go func() {
-					// DO SOMETHING WITH msg
-				}()
-			case "channel2":
-				go func() {
-					// DO SOMETHING WITH msg
-				}()
-				// MORE 7 CASES
-			}
+			log.Printf("Recieved Message on Channel (%s): %s", msg.Channel, msg.Payload)
 		}
 	}()
+
+	wg.Wait()
 	return nil
 }

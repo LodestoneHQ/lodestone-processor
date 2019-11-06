@@ -29,7 +29,7 @@ func main() {
 		},
 		Before: func(c *cli.Context) error {
 
-			capsuleUrl := "https://github.com/AnalogJ/lodestone-processor"
+			capsuleUrl := "AnalogJ/lodestone-processor"
 
 			versionInfo := fmt.Sprintf("%s.%s-%s", goos, goarch, version.VERSION)
 
@@ -61,8 +61,7 @@ func main() {
 						"queue":    c.String("redis-queue"),
 					})
 
-					listenClient.Subscribe()
-					return nil
+					return listenClient.Subscribe()
 				},
 
 				Flags: []cli.Flag{
