@@ -11,5 +11,7 @@ mgr_keep_lock_file: true
 scm_enable_branch_cleanup: true
 
 scm_release_assets:
-  - local_path: lodestone-processor-linux-amd64
-    artifact_name: lodestone-processor-linux-amd64
+  - local_path: lodestone-document-processor-linux-amd64
+    artifact_name: lodestone-document-processor-linux-amd64
+  - local_path: lodestone-thumbnail-processor-linux-amd64
+    artifact_name: lodestone-thumbnail-processor-linux-amd64
