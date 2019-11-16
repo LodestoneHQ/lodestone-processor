@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/analogj/go-util/utils"
 	"github.com/analogj/lodestone-processor/pkg/listen"
+	"github.com/analogj/lodestone-processor/pkg/processor"
 	"github.com/analogj/lodestone-processor/pkg/version"
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
@@ -65,7 +66,7 @@ func main() {
 					}
 					defer listenClient.Close()
 
-					return listenClient.Subscribe()
+					return listenClient.Subscribe(processor.ThumbnailProcessor)
 				},
 
 				Flags: []cli.Flag{

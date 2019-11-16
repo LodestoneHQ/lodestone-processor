@@ -58,7 +58,7 @@ func (n *AmqpListen) Init(config map[string]string) error {
 	return err
 }
 
-func (n *AmqpListen) Subscribe() error {
+func (n *AmqpListen) Subscribe(processor func(body []byte) error) error {
 	fmt.Println("Subscribe to events..")
 
 	err := n.channel.QueueBind(
@@ -89,6 +89,10 @@ func (n *AmqpListen) Subscribe() error {
 	go func() {
 		for d := range msgs {
 			log.Printf(" [x] %s", d.Body)
+			if err := processor(d.Body); err != nil {
+				log.Printf("Error when processing document %s", err)
+				//TODO: add to the dead letter queue (for further processing later)
+			}
 		}
 	}()
 

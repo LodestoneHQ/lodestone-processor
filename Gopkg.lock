@@ -3,95 +3,79 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:45a8f74bd19fd7f429e981178b5b773ec769daa3c84d36157b45462a836d56ed"
   name = "github.com/analogj/go-util"
   packages = ["utils"]
-  pruneopts = "UT"
   revision = "5295e364eb144aa8e5af346f41d5d0fc1bdecbf5"
 
 [[projects]]
-  digest = "1:865079840386857c809b72ce300be7580cb50d3d3129ce11bf9aa6ca2bc1934a"
   name = "github.com/fatih/color"
   packages = ["."]
-  pruneopts = "UT"
   revision = "5b77d2a35fb0ede96d138fc9a99f5c9b6aef11b4"
   version = "v1.7.0"
 
 [[projects]]
   branch = "master"
-  digest = "1:7d7858db1f9b43b69c2905bae2b5c8b8395f6d2093dbf147ffaeb424c34c4e81"
   name = "github.com/kvz/logstreamer"
   packages = ["."]
-  pruneopts = "UT"
   revision = "a635b98146f0f465f3413a0b8ec481f3698d3fc2"
 
 [[projects]]
-  digest = "1:c658e84ad3916da105a761660dcaeb01e63416c8ec7bc62256a9b411a05fcd67"
   name = "github.com/mattn/go-colorable"
   packages = ["."]
-  pruneopts = "UT"
   revision = "167de6bfdfba052fa6b2d3664c8f5272e23c9072"
   version = "v0.0.9"
 
 [[projects]]
-  digest = "1:d62282425ffb75047679d7e2c3b980eea7f82c05ef5fb9142ee617ebac6e7432"
   name = "github.com/mattn/go-isatty"
   packages = ["."]
-  pruneopts = "UT"
   revision = "88ba11cfdc67c7588b30042edf244b2875f892b6"
   version = "v0.0.10"
 
 [[projects]]
-  digest = "1:5d231480e1c64a726869bc4142d270184c419749d34f167646baa21008eb0a79"
   name = "github.com/mitchellh/go-homedir"
   packages = ["."]
-  pruneopts = "UT"
   revision = "af06845cf3004701891bf4fdb884bfe4920b3727"
   version = "v1.1.0"
 
 [[projects]]
   branch = "master"
-  digest = "1:3df46e572883257c46c470dc1796f9bc609d0d0d7339dd10358030649b9beb93"
   name = "github.com/streadway/amqp"
   packages = ["."]
-  pruneopts = "UT"
   revision = "edfb9018d2714e4ec54dbaba37dbfef2bdadf0e4"
 
 [[projects]]
-  digest = "1:01d3c3dfb7ef9da24cd00cbd5b9e2c147fa7a3f44a83028bc737da9cac7ed60b"
   name = "github.com/urfave/cli"
   packages = ["."]
-  pruneopts = "UT"
   revision = "0bdeddeeb0f650497d603c4ad7b20cfe685682f6"
   version = "v1.19.1"
 
 [[projects]]
   branch = "master"
-  digest = "1:bbe51412d9915d64ffaa96b51d409e070665efc5194fcf145c4a27d4133107a4"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
-  pruneopts = "UT"
   revision = "c7e5f84aec591254278750bee18f39e5dd19cdb5"
 
 [[projects]]
   branch = "master"
-  digest = "1:1017834f19e0d987e8b1b928f016b0a1186a202ec1867fee7112efd4b4475bd1"
   name = "golang.org/x/sys"
   packages = [
     "unix",
-    "windows",
+    "windows"
   ]
-  pruneopts = "UT"
   revision = "c1f44814a5cd81a6d1cb589ef1e528bc5d305e07"
+
+[[projects]]
+  name = "gopkg.in/gographics/imagick.v2"
+  packages = [
+    "imagick",
+    "imagick/types"
+  ]
+  revision = "589a8ef16fd4f08a29ad26afe5c33fb5673e4efc"
+  version = "v2.5.0"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  input-imports = [
-    "github.com/analogj/go-util/utils",
-    "github.com/fatih/color",
-    "github.com/streadway/amqp",
-    "github.com/urfave/cli",
-  ]
+  inputs-digest = "81f202d0215cde0d9feead0c4721bb29e2f4efc26c28036c3d333f28dc617a57"
   solver-name = "gps-cdcl"
   solver-version = 1

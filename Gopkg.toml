@@ -40,3 +40,7 @@
 [[constraint]]
   version = "=v6.15.5"
   name = "github.com/go-redis/redis"
+
+[[constraint]]
+  name = "gopkg.in/gographics/imagick.v2"
+  version = "2.5.0"
