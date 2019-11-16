@@ -12,3 +12,6 @@
 *.out
 
 vendor
+
+lodestone-document-processor-linux-amd64
+lodestone-thumbnail-processor-linux-amd64
