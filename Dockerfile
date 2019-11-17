@@ -1,6 +1,6 @@
 FROM golang as builder
 
-RUN apt-get update && apt-get install -y bash curl git go-dep libmagickwand-6.q16-dev libreoffice-common
+RUN apt-get update && apt-get install -y bash curl git go-dep libmagickwand-6.q16-dev
 WORKDIR /go/src/github.com/analogj/lodestone-processor/
 COPY . /go/src/github.com/analogj/lodestone-processor/
 COPY 152-2009-R0911_A1.pdf /tmp/152-2009-R0911_A1.pdf
