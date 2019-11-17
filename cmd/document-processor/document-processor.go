@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/analogj/go-util/utils"
 	"github.com/analogj/lodestone-processor/pkg/listen"
+	"github.com/analogj/lodestone-processor/pkg/processor"
 	"github.com/analogj/lodestone-processor/pkg/version"
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
@@ -56,19 +57,25 @@ func main() {
 
 					listenClient = new(listen.AmqpListen)
 					err := listenClient.Init(map[string]string{
-						"amqp-url": c.String("amqp-url"),
-						"exchange": c.String("amqp-exchange"),
-						"queue":    c.String("amqp-queue"),
+						"amqp-url":    c.String("amqp-url"),
+						"exchange":    c.String("amqp-exchange"),
+						"queue":       c.String("amqp-queue"),
+						"storage-url": c.String("storage-url"),
 					})
 					if err != nil {
 						return err
 					}
 					defer listenClient.Close()
 
-					return listenClient.Subscribe()
+					return listenClient.Subscribe(processor.DocumentProcessor)
 				},
 
 				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:  "storage-url",
+						Usage: "The storage server url",
+						Value: "http://storage:9000",
+					},
 
 					&cli.StringFlag{
 						Name:  "amqp-url",

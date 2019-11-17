@@ -2,8 +2,9 @@
 engine_enable_code_mutation: true
 
 engine_cmd_compile:
-  - 'GOOS=linux GARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -ldflags "-X main.goos=linux -X main.goarch=amd64 -extldflags \"-static\"" -o lodestone-document-processor-linux-amd64 ./cmd/document-processor/document-processor.go'
-  - 'GOOS=linux GARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -ldflags "-X main.goos=linux -X main.goarch=amd64 -extldflags \"-static\"" -o lodestone-thumbnail-processor-linux-amd64 ./cmd/thumbnail-processor/thumbnail-processor.go'
+  - 'apt-get update && apt-get install -y bash curl git go-dep libmagickwand-6.q16-dev libreoffice-common'
+  - 'go build -o lodestone-document-processor-linux-amd64 ./cmd/document-processor/document-processor.go'
+  - 'go build -o lodestone-thumbnail-processor-linux-amd64 ./cmd/thumbnail-processor/thumbnail-processor.go'
 engine_cmd_test: 'go test -v ./...'
 engine_disable_lint: true
 
