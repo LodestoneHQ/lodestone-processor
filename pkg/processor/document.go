@@ -1,6 +1,6 @@
 package processor
 
-func DocumentProcessor(body []byte) error {
+func DocumentProcessor(body []byte, storageUrl string) error {
 
 	//TODO pass document to TIKA
 
