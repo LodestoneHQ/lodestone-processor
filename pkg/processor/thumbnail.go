@@ -6,7 +6,6 @@ import (
 	"github.com/analogj/lodestone-processor/pkg/model"
 	"github.com/minio/minio-go"
 	"gopkg.in/gographics/imagick.v2/imagick"
-	"io"
 	"io/ioutil"
 	"math"
 	"os"
@@ -100,23 +99,12 @@ func retrieveDocument(storageEndpoint string, storageBucket string, storagePath 
 		return "", err
 	}
 
-	reader, err := s3Client.GetObject(storageBucket, storagePath, minio.GetObjectOptions{})
-	if err != nil {
-		return "", err
-	}
-	defer reader.Close()
+	fileName := filepath.Base(storagePath)
+	localFilepath := filepath.Join(outputDirectory, fileName)
 
-	// Create the file
-	outputFilePath := filepath.Join(outputDirectory, storagePath)
-	out, err := os.Create(outputFilePath)
-	if err != nil {
-		return "", err
-	}
-	defer out.Close()
+	err = s3Client.FGetObject(storageBucket, storagePath, localFilepath, minio.GetObjectOptions{})
 
-	// Write the body to file
-	_, err = io.Copy(out, reader)
-	return outputFilePath, err
+	return localFilepath, err
 }
 
 func generateThumbnail(docFilePath string, outputDirectory string) (string, error) {
@@ -183,7 +171,7 @@ func generateThumbnail(docFilePath string, outputDirectory string) (string, erro
 		return "", err
 	}
 
-	//thumbnailImage := mw.GetImageBlob()
+	//get base filename and change the file extension.
 	fileName := filepath.Base(docFilePath)
 	ext := path.Ext(fileName)
 	fileName = fileName[0:len(fileName)-len(ext)] + ".jpg"
