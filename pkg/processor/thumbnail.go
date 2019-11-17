@@ -4,19 +4,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/analogj/lodestone-processor/pkg/model"
+	"github.com/minio/minio-go"
 	"gopkg.in/gographics/imagick.v2/imagick"
 	"io"
 	"io/ioutil"
 	"math"
-	"net/http"
-	"net/http/httputil"
-	"net/url"
 	"os"
 	"path"
 	"path/filepath"
 )
 
-func ThumbnailProcessor(body []byte, storageUrl string) error {
+func ThumbnailProcessor(body []byte, storageEndpoint string) error {
 	//make a temporary directory for subsequent processing (original file download, and thumb generation)
 	dir, err := ioutil.TempDir("", "thumb")
 	if err != nil {
@@ -30,12 +28,12 @@ func ThumbnailProcessor(body []byte, storageUrl string) error {
 		return err
 	}
 
-	storageDocPath, storageThumbPath, err := generateStoragePath(event)
+	docBucketName, docBucketPath, err := generateStoragePath(event)
 	if err != nil {
 		return err
 	}
 
-	filePath, err := retrieveDocument(storageUrl, storageDocPath, dir)
+	filePath, err := retrieveDocument(storageEndpoint, docBucketName, docBucketPath, dir)
 	if err != nil {
 		return err
 	}
@@ -45,7 +43,7 @@ func ThumbnailProcessor(body []byte, storageUrl string) error {
 		return err
 	}
 
-	err = uploadThumbnail(storageUrl, thumbFilePath, storageThumbPath)
+	err = uploadThumbnail(storageEndpoint, "thumbnails", docBucketPath, thumbFilePath)
 
 	return err
 
@@ -92,22 +90,21 @@ func generateStoragePath(event model.S3Event) (string, string, error) {
 	bucketName := event.Records[0].S3.Bucket.Name
 	documentPath := event.Records[0].S3.Object.Key
 
-	return fmt.Sprintf("%s/%s", bucketName, documentPath), fmt.Sprintf("thumbnails/%s", documentPath), nil
+	return bucketName, documentPath, nil
 }
 
-func retrieveDocument(storageUrl string, storagePath string, outputDirectory string) (string, error) {
-	u, err := url.Parse(storageUrl)
-	if err != nil {
-		return "", err
-	}
-	storageFileUrl := path.Join(u.Path, storagePath)
+func retrieveDocument(storageEndpoint string, storageBucket string, storagePath string, outputDirectory string) (string, error) {
 
-	// Get the data
-	resp, err := http.Get(storageFileUrl)
+	s3Client, err := minio.New(storageEndpoint, os.Getenv("MINIO_ACCESS_KEY"), os.Getenv("MINIO_SECRET_KEY"), false)
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+
+	reader, err := s3Client.GetObject(storageBucket, storagePath, minio.GetObjectOptions{})
+	if err != nil {
+		return "", err
+	}
+	defer reader.Close()
 
 	// Create the file
 	outputFilePath := filepath.Join(outputDirectory, storagePath)
@@ -118,7 +115,7 @@ func retrieveDocument(storageUrl string, storagePath string, outputDirectory str
 	defer out.Close()
 
 	// Write the body to file
-	_, err = io.Copy(out, resp.Body)
+	_, err = io.Copy(out, reader)
 	return outputFilePath, err
 }
 
@@ -188,39 +185,31 @@ func generateThumbnail(docFilePath string, outputDirectory string) (string, erro
 
 	//thumbnailImage := mw.GetImageBlob()
 	fileName := filepath.Base(docFilePath)
+	ext := path.Ext(fileName)
+	fileName = fileName[0:len(fileName)-len(ext)] + ".jpg"
+
 	outputFilePath := filepath.Join(outputDirectory, fileName)
 	err = mw.WriteImage(outputFilePath)
 
 	return outputFilePath, err
 }
 
-func uploadThumbnail(storageUrl string, thumbFilePath string, storageThumbPath string) error {
+func uploadThumbnail(storageEndpoint string, storageBucket string, storagePath string, thumbFilePath string) error {
 
-	u, err := url.Parse(storageUrl)
+	//convert extension to jpg before uploading
+	ext := path.Ext(storagePath)
+	storagePath = storagePath[0:len(storagePath)-len(ext)] + ".jpg"
+
+	s3Client, err := minio.New(storageEndpoint, os.Getenv("MINIO_ACCESS_KEY"), os.Getenv("MINIO_SECRET_KEY"), false)
 	if err != nil {
 		return err
 	}
-	storageThumbFileUrl := path.Join(u.Path, storageThumbPath)
 
-	// Open a file.
-	f, err := os.Open(thumbFilePath)
-	if err != nil {
+	if _, err := s3Client.FPutObject(storageBucket, storagePath, thumbFilePath, minio.PutObjectOptions{
+		ContentType: "application/octet-stream",
+	}); err != nil {
 		return err
 	}
-	defer f.Close()
 
-	// Post a file to URL.
-	resp, err := http.Post(storageThumbFileUrl, "application/data", f)
-	if err != nil {
-		panic(err)
-	}
-	defer resp.Body.Close()
-
-	// Dump response to debug.
-	b, err := httputil.DumpResponse(resp, true)
-	if err != nil {
-		return err
-	}
-	fmt.Println(b)
 	return nil
 }

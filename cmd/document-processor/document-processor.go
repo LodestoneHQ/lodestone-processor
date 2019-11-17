@@ -57,10 +57,10 @@ func main() {
 
 					listenClient = new(listen.AmqpListen)
 					err := listenClient.Init(map[string]string{
-						"amqp-url":    c.String("amqp-url"),
-						"exchange":    c.String("amqp-exchange"),
-						"queue":       c.String("amqp-queue"),
-						"storage-url": c.String("storage-url"),
+						"amqp-url":         c.String("amqp-url"),
+						"exchange":         c.String("amqp-exchange"),
+						"queue":            c.String("amqp-queue"),
+						"storage-endpoint": c.String("storage-endpoint"),
 					})
 					if err != nil {
 						return err
@@ -72,8 +72,8 @@ func main() {
 
 				Flags: []cli.Flag{
 					&cli.StringFlag{
-						Name:  "storage-url",
-						Usage: "The storage server url",
+						Name:  "storage-endpoint",
+						Usage: "The storage server endpoint",
 						Value: "http://storage:9000",
 					},
 
