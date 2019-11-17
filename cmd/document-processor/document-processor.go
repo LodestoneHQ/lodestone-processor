@@ -61,6 +61,7 @@ func main() {
 						"exchange":         c.String("amqp-exchange"),
 						"queue":            c.String("amqp-queue"),
 						"storage-endpoint": c.String("storage-endpoint"),
+						"tika-url":         c.String("tika-url"),
 					})
 					if err != nil {
 						return err
@@ -75,6 +76,12 @@ func main() {
 						Name:  "storage-endpoint",
 						Usage: "The storage server endpoint",
 						Value: "storage:9000",
+					},
+
+					&cli.StringFlag{
+						Name:  "tika-url",
+						Usage: "The tika server url",
+						Value: "http://tika:9998",
 					},
 
 					&cli.StringFlag{
