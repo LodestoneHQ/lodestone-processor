@@ -194,7 +194,7 @@ func uploadThumbnail(storageEndpoint string, storageBucket string, storagePath s
 	}
 
 	if _, err := s3Client.FPutObject(storageBucket, storagePath, thumbFilePath, minio.PutObjectOptions{
-		ContentType: "application/octet-stream",
+		ContentType: "image/jpeg",
 	}); err != nil {
 		return err
 	}
