@@ -74,7 +74,7 @@ func main() {
 					&cli.StringFlag{
 						Name:  "storage-endpoint",
 						Usage: "The storage server endpoint",
-						Value: "http://storage:9000",
+						Value: "storage:9000",
 					},
 
 					&cli.StringFlag{
