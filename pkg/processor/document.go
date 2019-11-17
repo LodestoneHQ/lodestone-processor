@@ -61,3 +61,9 @@ func parseDocument(localFilePath string) error {
 
 	return nil
 }
+
+//store document in elasticsearch
+func storeDocument() {
+	// use https://github.com/elastic/go-elasticsearch
+	// first migrate capsulecd to support mod
+}
