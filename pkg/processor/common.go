@@ -2,7 +2,7 @@ package processor
 
 import (
 	"github.com/analogj/lodestone-processor/pkg/model"
-	"github.com/minio/minio-go"
+	"github.com/minio/minio-go/v6"
 	"os"
 	"path/filepath"
 )

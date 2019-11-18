@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/analogj/lodestone-processor/pkg/model"
-	"github.com/minio/minio-go"
+	"github.com/minio/minio-go/v6"
 	"gopkg.in/gographics/imagick.v2/imagick"
 	"io/ioutil"
 	"math"
