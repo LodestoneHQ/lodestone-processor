@@ -57,31 +57,48 @@ func main() {
 
 					listenClient = new(listen.AmqpListen)
 					err := listenClient.Init(map[string]string{
-						"amqp-url":         c.String("amqp-url"),
-						"exchange":         c.String("amqp-exchange"),
-						"queue":            c.String("amqp-queue"),
-						"storage-endpoint": c.String("storage-endpoint"),
-						"tika-url":         c.String("tika-url"),
+						"amqp-url": c.String("amqp-url"),
+						"exchange": c.String("amqp-exchange"),
+						"queue":    c.String("amqp-queue"),
 					})
 					if err != nil {
 						return err
 					}
 					defer listenClient.Close()
 
-					return listenClient.Subscribe(processor.DocumentProcessor)
+					documentProcessor, err := processor.CreateDocumentProcessor(
+						c.String("storage-endpoint"),
+						c.String("tika-endpoint"),
+						c.String("elasticsearch-endpoint"))
+
+					if err != nil {
+						return err
+					}
+
+					return listenClient.Subscribe(documentProcessor.Process)
 				},
 
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:  "storage-endpoint",
 						Usage: "The storage server endpoint",
-						Value: "storage:9000",
+						Value: "http://storage:9000",
 					},
 
 					&cli.StringFlag{
-						Name:  "tika-url",
-						Usage: "The tika server url",
+						Name:  "tika-endpoint",
+						Usage: "The tika server endpoint",
 						Value: "http://tika:9998",
+					},
+					&cli.StringFlag{
+						Name:  "elasticsearch-endpoint",
+						Usage: "The elasticsearch server endpoint",
+						Value: "http://elasticsearch:9200",
+					},
+					&cli.StringFlag{
+						Name:  "elasticsearch-index",
+						Usage: "The elasticsearch index to store documents in",
+						Value: "lodestone",
 					},
 
 					&cli.StringFlag{

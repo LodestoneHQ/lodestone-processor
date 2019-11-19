@@ -7,17 +7,15 @@ import (
 )
 
 type AmqpListen struct {
-	client          *amqp.Connection
-	channel         *amqp.Channel
-	exchange        string
-	queue           string
-	storageEndpoint string
+	client   *amqp.Connection
+	channel  *amqp.Channel
+	exchange string
+	queue    string
 }
 
 func (n *AmqpListen) Init(config map[string]string) error {
 	n.exchange = config["exchange"]
 	n.queue = config["queue"]
-	n.storageEndpoint = config["storage-endpoint"]
 
 	client, err := amqp.Dial(config["amqp-url"])
 	if err != nil {
@@ -60,7 +58,7 @@ func (n *AmqpListen) Init(config map[string]string) error {
 	return err
 }
 
-func (n *AmqpListen) Subscribe(processor func(body []byte, storageUrl string) error) error {
+func (n *AmqpListen) Subscribe(processor func(body []byte) error) error {
 	fmt.Println("Subscribe to events..")
 
 	err := n.channel.QueueBind(
@@ -91,7 +89,7 @@ func (n *AmqpListen) Subscribe(processor func(body []byte, storageUrl string) er
 	go func() {
 		for d := range msgs {
 			log.Printf(" [x] %s", d.Body)
-			if err := processor(d.Body, n.storageEndpoint); err != nil {
+			if err := processor(d.Body); err != nil {
 				log.Printf("Error when processing document %s", err)
 				//TODO: add to the dead letter queue (for further processing later)
 			}

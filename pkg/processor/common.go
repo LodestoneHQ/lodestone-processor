@@ -3,6 +3,7 @@ package processor
 import (
 	"github.com/analogj/lodestone-processor/pkg/model"
 	"github.com/minio/minio-go/v6"
+	"net/url"
 	"os"
 	"path/filepath"
 )
@@ -51,9 +52,11 @@ func generateStoragePath(event model.S3Event) (string, string, error) {
 	return bucketName, documentPath, nil
 }
 
-func retrieveDocument(storageEndpoint string, storageBucket string, storagePath string, outputDirectory string) (string, error) {
+func retrieveDocument(storageEndpoint *url.URL, storageBucket string, storagePath string, outputDirectory string) (string, error) {
 
-	s3Client, err := minio.New(storageEndpoint, os.Getenv("MINIO_ACCESS_KEY"), os.Getenv("MINIO_SECRET_KEY"), false)
+	secureProtocol := storageEndpoint.Scheme == "https"
+
+	s3Client, err := minio.New(storageEndpoint.Host, os.Getenv("MINIO_ACCESS_KEY"), os.Getenv("MINIO_SECRET_KEY"), secureProtocol)
 	if err != nil {
 		return "", err
 	}

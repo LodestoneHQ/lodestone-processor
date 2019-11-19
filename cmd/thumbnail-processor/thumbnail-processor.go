@@ -57,17 +57,20 @@ func main() {
 
 					listenClient = new(listen.AmqpListen)
 					err := listenClient.Init(map[string]string{
-						"amqp-url":         c.String("amqp-url"),
-						"exchange":         c.String("amqp-exchange"),
-						"queue":            c.String("amqp-queue"),
-						"storage-endpoint": c.String("storage-endpoint"),
+						"amqp-url": c.String("amqp-url"),
+						"exchange": c.String("amqp-exchange"),
+						"queue":    c.String("amqp-queue"),
 					})
 					if err != nil {
 						return err
 					}
 					defer listenClient.Close()
 
-					return listenClient.Subscribe(processor.ThumbnailProcessor)
+					thumbnailProcessor, err := processor.CreateThumbnailProcessor(c.String("storage-endpoint"))
+					if err != nil {
+						return err
+					}
+					return listenClient.Subscribe(thumbnailProcessor.Process)
 				},
 
 				Flags: []cli.Flag{
@@ -75,7 +78,7 @@ func main() {
 					&cli.StringFlag{
 						Name:  "storage-endpoint",
 						Usage: "The storage server endpoint",
-						Value: "storage:9000",
+						Value: "http://storage:9000",
 					},
 
 					&cli.StringFlag{
