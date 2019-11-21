@@ -103,13 +103,13 @@ func (dp *DocumentProcessor) parseDocument(bucketPath string, localFilePath stri
 	if err != nil {
 		return model.Document{}, err
 	}
+	log.Printf("body: %s", body)
 
+	f.Seek(0, 0) //reset file reader back to beginning.
 	meta, err := client.Meta(context.Background(), f)
 	if err != nil {
 		return model.Document{}, err
 	}
-
-	log.Printf("body: %s", body)
 	log.Printf("meta: %s", meta)
 
 	doc := model.Document{
