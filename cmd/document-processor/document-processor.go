@@ -69,7 +69,9 @@ func main() {
 					documentProcessor, err := processor.CreateDocumentProcessor(
 						c.String("storage-endpoint"),
 						c.String("tika-endpoint"),
-						c.String("elasticsearch-endpoint"))
+						c.String("elasticsearch-endpoint"),
+						c.String("elasticsearch-index"),
+					)
 
 					if err != nil {
 						return err
