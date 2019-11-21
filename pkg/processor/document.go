@@ -78,12 +78,12 @@ func (dp *DocumentProcessor) Process(body []byte) error {
 	}
 
 	//TODO pass document to TIKA
-	err = dp.parseDocument(filePath)
+	doc, err := dp.parseDocument(docBucketPath, filePath)
 	if err != nil {
 		return err
 	}
 
-	err = dp.storeDocument(docBucketPath, filePath)
+	err = dp.storeDocument(docBucketPath, doc)
 	if err != nil {
 		return err
 	}
@@ -91,22 +91,33 @@ func (dp *DocumentProcessor) Process(body []byte) error {
 	return nil
 }
 
-func (dp *DocumentProcessor) parseDocument(localFilePath string) error {
+func (dp *DocumentProcessor) parseDocument(bucketPath string, localFilePath string) (model.Document, error) {
 
 	f, err := os.Open(localFilePath)
 	if err != nil {
-		return err
+		return model.Document{}, err
 	}
 
 	client := tika.NewClient(nil, dp.tikaEndpoint.String())
 	body, err := client.Parse(context.Background(), f)
 	if err != nil {
-		return err
+		return model.Document{}, err
 	}
 
-	log.Printf("%s", body)
+	meta, err := client.Meta(context.Background(), f)
+	if err != nil {
+		return model.Document{}, err
+	}
 
-	return nil
+	log.Printf("body: %s", body)
+	log.Printf("meta: %s", meta)
+
+	doc := model.Document{
+		ID:      bucketPath,
+		Content: body,
+	}
+
+	return doc, nil
 }
 
 //store document in elasticsearch
