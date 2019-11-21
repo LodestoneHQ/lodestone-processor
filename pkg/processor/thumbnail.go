@@ -8,12 +8,31 @@ import (
 	"gopkg.in/gographics/imagick.v2/imagick"
 	"io/ioutil"
 	"math"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
 )
 
-func ThumbnailProcessor(body []byte, storageEndpoint string) error {
+type ThumbnailProcessor struct {
+	storageEndpoint *url.URL
+}
+
+func CreateThumbnailProcessor(storageEndpoint string) (ThumbnailProcessor, error) {
+
+	storageEndpointUrl, err := url.Parse(storageEndpoint)
+	if err != nil {
+		return ThumbnailProcessor{}, err
+	}
+
+	tp := ThumbnailProcessor{
+		storageEndpoint: storageEndpointUrl,
+	}
+
+	return tp, nil
+}
+
+func (tp *ThumbnailProcessor) Process(body []byte) error {
 	//make a temporary directory for subsequent processing (original file download, and thumb generation)
 	dir, err := ioutil.TempDir("", "thumb")
 	if err != nil {
@@ -32,7 +51,7 @@ func ThumbnailProcessor(body []byte, storageEndpoint string) error {
 		return err
 	}
 
-	filePath, err := retrieveDocument(storageEndpoint, docBucketName, docBucketPath, dir)
+	filePath, err := retrieveDocument(tp.storageEndpoint, docBucketName, docBucketPath, dir)
 	if err != nil {
 		return err
 	}
@@ -42,7 +61,7 @@ func ThumbnailProcessor(body []byte, storageEndpoint string) error {
 		return err
 	}
 
-	err = uploadThumbnail(storageEndpoint, "thumbnails", docBucketPath, thumbFilePath)
+	err = uploadThumbnail(tp.storageEndpoint, "thumbnails", docBucketPath, thumbFilePath)
 
 	return err
 
@@ -123,13 +142,15 @@ func generateThumbnail(docFilePath string, outputDirectory string) (string, erro
 	return outputFilePath, err
 }
 
-func uploadThumbnail(storageEndpoint string, storageBucket string, storagePath string, thumbFilePath string) error {
+func uploadThumbnail(storageEndpoint *url.URL, storageBucket string, storagePath string, thumbFilePath string) error {
 
 	//convert extension to jpg before uploading
 	ext := path.Ext(storagePath)
 	storagePath = storagePath[0:len(storagePath)-len(ext)] + ".jpg"
 
-	s3Client, err := minio.New(storageEndpoint, os.Getenv("MINIO_ACCESS_KEY"), os.Getenv("MINIO_SECRET_KEY"), false)
+	secureProtocol := storageEndpoint.Scheme == "https"
+
+	s3Client, err := minio.New(storageEndpoint.Host, os.Getenv("MINIO_ACCESS_KEY"), os.Getenv("MINIO_SECRET_KEY"), secureProtocol)
 	if err != nil {
 		return err
 	}
