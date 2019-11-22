@@ -93,20 +93,26 @@ func (dp *DocumentProcessor) Process(body []byte) error {
 
 func (dp *DocumentProcessor) parseDocument(bucketPath string, localFilePath string) (model.Document, error) {
 
-	f, err := os.Open(localFilePath)
+	docFile, err := os.Open(localFilePath)
 	if err != nil {
 		return model.Document{}, err
 	}
+	defer docFile.Close()
 
 	client := tika.NewClient(nil, dp.tikaEndpoint.String())
-	body, err := client.Parse(context.Background(), f)
+	body, err := client.Parse(context.Background(), docFile)
 	if err != nil {
 		return model.Document{}, err
 	}
 	log.Printf("body: %s", body)
 
-	f.Seek(0, 0) //reset file reader back to beginning.
-	meta, err := client.Meta(context.Background(), f)
+	metaFile, err := os.Open(localFilePath)
+	if err != nil {
+		return model.Document{}, err
+	}
+	defer metaFile.Close()
+
+	meta, err := client.Meta(context.Background(), metaFile)
 	if err != nil {
 		return model.Document{}, err
 	}
