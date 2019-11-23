@@ -9,8 +9,10 @@ import (
 	"github.com/gobuffalo/packr"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"net/url"
 	"os"
+	"time"
 )
 import "github.com/google/go-tika/tika"
 
@@ -91,6 +93,25 @@ func (dp *DocumentProcessor) Process(body []byte) error {
 	return nil
 }
 
+type TikaRoundTripper struct {
+	r http.RoundTripper
+}
+
+// https://cwiki.apache.org/confluence/display/tika/TikaJAXRS#TikaJAXRS-MultipartSupport TIKA must have an Accept header to return JSON responses.
+func (mrt TikaRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
+	r.Header.Add("Accept", "application/json")
+	return mrt.r.RoundTrip(r)
+}
+
+func (dp *DocumentProcessor) tikaHttpClient() *http.Client {
+	client := &http.Client{
+		Timeout:   time.Second * 10,
+		Transport: TikaRoundTripper{r: http.DefaultTransport},
+	}
+
+	return client
+}
+
 func (dp *DocumentProcessor) parseDocument(bucketPath string, localFilePath string) (model.Document, error) {
 
 	docFile, err := os.Open(localFilePath)
@@ -99,7 +120,7 @@ func (dp *DocumentProcessor) parseDocument(bucketPath string, localFilePath stri
 	}
 	defer docFile.Close()
 
-	client := tika.NewClient(nil, dp.tikaEndpoint.String())
+	client := tika.NewClient(dp.tikaHttpClient(), dp.tikaEndpoint.String())
 	body, err := client.Parse(context.Background(), docFile)
 	if err != nil {
 		return model.Document{}, err
