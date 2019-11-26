@@ -13,6 +13,7 @@ require (
 	github.com/mattn/go-isatty v0.0.10 // indirect
 	github.com/minio/minio-go/v6 v6.0.41
 	github.com/streadway/amqp v0.0.0-20190827072141-edfb9018d271
+	github.com/stretchr/testify v1.3.0
 	github.com/urfave/cli v1.19.1
 	golang.org/x/crypto v0.0.0-20191105034135-c7e5f84aec59 // indirect
 	golang.org/x/net v0.0.0-20191116160921-f9c825593386 // indirect
