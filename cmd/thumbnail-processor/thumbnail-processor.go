@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/analogj/go-util/utils"
 	"github.com/analogj/lodestone-processor/pkg/listen"
-	"github.com/analogj/lodestone-processor/pkg/processor"
 	"github.com/analogj/lodestone-processor/pkg/processor/thumbnail"
 	"github.com/analogj/lodestone-processor/pkg/version"
 	"github.com/fatih/color"
