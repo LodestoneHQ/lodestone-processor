@@ -7,10 +7,7 @@ type Document struct {
 
 	Content string `json:"content"`
 
-	Lodestone struct {
-		Tags     []string `json:"tags"`
-		Bookmark bool     `json:"bookmark"`
-	} `json:"lodestone"`
+	Lodestone DocLodestone `json:"lodestone"`
 
 	// File information/attributes
 	File DocFile `json:"file"`
@@ -20,6 +17,11 @@ type Document struct {
 
 	// Document metadata extracted from document via tika
 	Meta DocMeta `json:"meta"`
+}
+
+type DocLodestone struct {
+	Tags     []string `json:"tags"`
+	Bookmark bool     `json:"bookmark"`
 }
 
 type DocFile struct {

@@ -1,4 +1,4 @@
-package processor
+package document
 
 import (
 	"github.com/analogj/lodestone-processor/pkg/model"
@@ -74,6 +74,53 @@ func TestDocumentProcessor_Process(t *testing.T) {
 
 	//assert
 	require.NoError(t, err)
-	require.Equal(t, docModel, model.Document{})
+	require.Equal(t, model.Document{
+		ID:      "",
+		Content: "",
+		Lodestone: model.DocLodestone{
+			Tags:     []string(nil),
+			Bookmark: false,
+		},
+		File: model.DocFile{
+			ContentType:  "application/pdf",
+			FileName:     "",
+			Extension:    "",
+			Filesize:     0,
+			IndexedChars: 0,
+			Checksum:     "",
+			Group:        "",
+			Owner:        "",
+		},
+		Storage: model.DocStorage{
+			Bucket:      "",
+			Path:        "",
+			ThumbBucket: "",
+			ThumbPath:   "",
+		},
+		Meta: model.DocMeta{
+			Author:      "SE:W:CAR:MP",
+			Date:        "",
+			Keywords:    []string{"Fillable"},
+			Title:       "2018 Form 4868",
+			Language:    "en",
+			Format:      "",
+			Identifier:  "",
+			Contributor: "",
+			Modifier:    "",
+			CreatorTool: "Adobe LiveCycle Designer ES 9.0",
+			Publisher:   "",
+			Relation:    "",
+			Rights:      "",
+			Source:      "",
+			Type:        "",
+			Description: "Application for Automatic Extension of Time To File U.S. Individual Income Tax Return",
+			Created:     "2018-10-24T18:27:15Z",
+			Latitude:    "",
+			Longitude:   "",
+			Altitude:    "",
+			Rating:      0x0,
+			Comments:    "",
+		},
+	}, docModel)
 	//require.Implements(t, (*Interface)(nil), config, "should implement the config interface")
 }

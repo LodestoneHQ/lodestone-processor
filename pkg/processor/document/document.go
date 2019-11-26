@@ -1,4 +1,4 @@
-package processor
+package document
 
 import (
 	"bytes"
@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/analogj/lodestone-processor/pkg/model"
+	"github.com/analogj/lodestone-processor/pkg/processor"
 	"github.com/elastic/go-elasticsearch/v7"
 	"github.com/gobuffalo/packr"
 	"io/ioutil"
@@ -72,12 +73,12 @@ func (dp *DocumentProcessor) Process(body []byte) error {
 		return err
 	}
 
-	docBucketName, docBucketPath, err := generateStoragePath(event)
+	docBucketName, docBucketPath, err := processor.GenerateStoragePath(event)
 	if err != nil {
 		return err
 	}
 
-	filePath, err := retrieveDocument(dp.storageEndpoint, docBucketName, docBucketPath, dir)
+	filePath, err := processor.RetrieveDocument(dp.storageEndpoint, docBucketName, docBucketPath, dir)
 	if err != nil {
 		return err
 	}
@@ -268,13 +269,31 @@ func (dp *DocumentProcessor) findString(dict map[string]interface{}, keys ...str
 
 func castToString(val interface{}) string {
 	rt := reflect.TypeOf(val)
+	if rt == nil {
+		return ""
+	}
 	switch rt.Kind() {
 	case reflect.Slice:
-		return fmt.Sprintf(strings.Join(val.([]string), ", "))
+		valSlice, ok := val.([]string)
+		if !ok {
+			log.Printf("%v is not a []string", val)
+			return ""
+		}
+		return fmt.Sprintf(strings.Join(valSlice, ", "))
 	case reflect.Array:
-		return fmt.Sprintf(strings.Join(val.([]string), ", "))
+		valSlice, ok := val.([]string)
+		if !ok {
+			log.Printf("%v is not an array", val)
+			return ""
+		}
+		return fmt.Sprintf(strings.Join(valSlice, ", "))
 	case reflect.String:
-		return val.(string)
+		valStr, ok := val.(string)
+		if !ok {
+			log.Printf("%v is not a string", val)
+			return ""
+		}
+		return valStr
 	default:
 		return ""
 	}
@@ -282,13 +301,33 @@ func castToString(val interface{}) string {
 
 func castToStringArray(val interface{}) []string {
 	rt := reflect.TypeOf(val)
+	if rt == nil {
+		return []string{}
+	}
+
 	switch rt.Kind() {
 	case reflect.Slice:
-		return val.([]string)
+		valSlice, ok := val.([]string)
+		if !ok {
+			log.Printf("%v is not a []string", val)
+			return []string{}
+		}
+		return valSlice
 	case reflect.Array:
-		return val.([]string)
+		valSlice, ok := val.([]string)
+		if !ok {
+			log.Printf("%v is not a []string", val)
+			return []string{}
+		}
+		return valSlice
 	case reflect.String:
-		return []string{val.(string)}
+		valStr, ok := val.(string)
+		if !ok {
+			log.Printf("%v is not a string", val)
+			return []string{}
+		}
+
+		return []string{valStr}
 	default:
 		return nil
 	}

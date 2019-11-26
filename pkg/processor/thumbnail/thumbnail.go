@@ -1,9 +1,10 @@
-package processor
+package thumbnail
 
 import (
 	"encoding/json"
 	"fmt"
 	"github.com/analogj/lodestone-processor/pkg/model"
+	"github.com/analogj/lodestone-processor/pkg/processor"
 	"github.com/minio/minio-go/v6"
 	"gopkg.in/gographics/imagick.v2/imagick"
 	"io/ioutil"
@@ -46,12 +47,12 @@ func (tp *ThumbnailProcessor) Process(body []byte) error {
 		return err
 	}
 
-	docBucketName, docBucketPath, err := generateStoragePath(event)
+	docBucketName, docBucketPath, err := processor.GenerateStoragePath(event)
 	if err != nil {
 		return err
 	}
 
-	filePath, err := retrieveDocument(tp.storageEndpoint, docBucketName, docBucketPath, dir)
+	filePath, err := processor.RetrieveDocument(tp.storageEndpoint, docBucketName, docBucketPath, dir)
 	if err != nil {
 		return err
 	}
