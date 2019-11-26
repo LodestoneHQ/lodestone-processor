@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 )
 
-func generateStoragePath(event model.S3Event) (string, string, error) {
+func GenerateStoragePath(event model.S3Event) (string, string, error) {
 	/*
 		{
 			"Records": [{
@@ -52,7 +52,7 @@ func generateStoragePath(event model.S3Event) (string, string, error) {
 	return bucketName, documentPath, nil
 }
 
-func retrieveDocument(storageEndpoint *url.URL, storageBucket string, storagePath string, outputDirectory string) (string, error) {
+func RetrieveDocument(storageEndpoint *url.URL, storageBucket string, storagePath string, outputDirectory string) (string, error) {
 
 	secureProtocol := storageEndpoint.Scheme == "https"
 
