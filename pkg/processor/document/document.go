@@ -153,6 +153,7 @@ func (dp *DocumentProcessor) parseDocument(bucketPath string, localFilePath stri
 
 	err = dp.parseTikaMetadata(metaJson, &doc)
 
+	log.Printf("PARSED DOCUMENT -> %v", doc)
 	return doc, err
 }
 
