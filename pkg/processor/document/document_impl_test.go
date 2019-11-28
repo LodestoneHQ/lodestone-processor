@@ -114,7 +114,6 @@ func TestDocumentProcessor_Process(t *testing.T) {
 			Source:      "",
 			Type:        "",
 			Description: "Application for Automatic Extension of Time To File U.S. Individual Income Tax Return",
-			Created:     "2018-10-24T18:27:15Z",
 			Latitude:    "",
 			Longitude:   "",
 			Altitude:    "",
