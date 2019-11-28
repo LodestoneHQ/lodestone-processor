@@ -3,19 +3,25 @@ package document
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/analogj/lodestone-processor/pkg/model"
 	"github.com/analogj/lodestone-processor/pkg/processor"
 	"github.com/elastic/go-elasticsearch/v7"
 	"github.com/gobuffalo/packr"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
+	"os/user"
+	"path"
 	"reflect"
 	"strings"
+	"syscall"
 	"time"
 )
 import "github.com/google/go-tika/tika"
@@ -25,7 +31,7 @@ type DocumentProcessor struct {
 	tikaEndpoint          *url.URL
 	elasticsearchEndpoint *url.URL
 	elasticsearchIndex    string
-	mappings              packr.Box
+	mappings              *packr.Box
 }
 
 func CreateDocumentProcessor(storageEndpoint string, tikaEndpoint string, elasticsearchEndpoint string, elasticsearchIndex string) (DocumentProcessor, error) {
@@ -45,14 +51,14 @@ func CreateDocumentProcessor(storageEndpoint string, tikaEndpoint string, elasti
 		return DocumentProcessor{}, err
 	}
 
-	box := packr.NewBox("../static/document-processor")
+	box := packr.NewBox("../../../static/document-processor")
 
 	dp := DocumentProcessor{
 		storageEndpoint:       storageEndpointUrl,
 		tikaEndpoint:          tikaEndpointUrl,
 		elasticsearchEndpoint: elasticsearchEndpointUrl,
 		elasticsearchIndex:    elasticsearchIndex,
-		mappings:              box,
+		mappings:              &box,
 	}
 
 	return dp, nil
@@ -84,7 +90,7 @@ func (dp *DocumentProcessor) Process(body []byte) error {
 	}
 
 	//TODO pass document to TIKA
-	doc, err := dp.parseDocument(docBucketPath, filePath)
+	doc, err := dp.parseDocument(docBucketName, docBucketPath, filePath)
 	if err != nil {
 		return err
 	}
@@ -119,7 +125,7 @@ func (dp *DocumentProcessor) tikaHttpClient() *http.Client {
 	return client
 }
 
-func (dp *DocumentProcessor) parseDocument(bucketPath string, localFilePath string) (model.Document, error) {
+func (dp *DocumentProcessor) parseDocument(bucketName string, bucketPath string, localFilePath string) (model.Document, error) {
 
 	docFile, err := os.Open(localFilePath)
 	if err != nil {
@@ -146,9 +152,63 @@ func (dp *DocumentProcessor) parseDocument(bucketPath string, localFilePath stri
 	}
 	log.Printf("metaJson: %s", metaJson)
 
+	fileStat, err := os.Stat(localFilePath)
+	if err != nil {
+		return model.Document{}, err
+	}
+
+	shaFile, err := os.Open(localFilePath)
+	if err != nil {
+		return model.Document{}, err
+	}
+	defer shaFile.Close()
+
+	hasher := sha256.New()
+	if _, err := io.Copy(hasher, shaFile); err != nil {
+		return model.Document{}, err
+	}
+	sha256Checksum := hex.EncodeToString(hasher.Sum(nil))
+
+	sysStat := fileStat.Sys().(*syscall.Stat_t)
+	AccessedTime := time.Unix(int64(sysStat.Atim.Sec), int64(sysStat.Atim.Nsec))
+	CreatedTIme := time.Unix(int64(sysStat.Ctim.Sec), int64(sysStat.Ctim.Nsec))
+
+	grp, err := user.LookupGroupId(fmt.Sprintf("%d", sysStat.Gid))
+	grpName := ""
+	if err == nil {
+		grpName = grp.Name
+	}
+
+	usr, err := user.LookupGroupId(fmt.Sprintf("%d", sysStat.Uid))
+	usrName := ""
+	if err == nil {
+		usrName = usr.Name
+	}
+
 	doc := model.Document{
 		ID:      bucketPath,
 		Content: docContent,
+		File: model.DocFile{
+			FileName:     fileStat.Name(),
+			Extension:    strings.TrimPrefix(path.Ext(fileStat.Name()), "."),
+			Filesize:     fileStat.Size(),
+			IndexedChars: int64(len(docContent)),
+			IndexedDate:  time.Now(),
+
+			Created:      CreatedTIme,
+			LastModified: fileStat.ModTime(),
+			LastAccessed: AccessedTime,
+			Checksum:     sha256Checksum,
+
+			Group: grpName,
+			Owner: usrName,
+		},
+		Storage: model.DocStorage{
+			Path:        bucketPath,
+			Bucket:      bucketName,
+			ThumbBucket: "thumbnails",
+			ThumbPath:   processor.GenerateThumbnailStoragePath(bucketPath),
+		},
 	}
 
 	err = dp.parseTikaMetadata(metaJson, &doc)
@@ -181,29 +241,41 @@ func (dp *DocumentProcessor) storeDocument(docBucketPath string, document model.
 
 	payload, err := json.Marshal(document)
 	if err != nil {
+		log.Printf("An error occured while json encoding Document: %v", err)
 		return err
 	}
 
-	_, err = es.Create(dp.elasticsearchIndex, docBucketPath, bytes.NewReader(payload))
+	log.Println("Attempting to store new document in elasticsearch")
+	esResp, err := es.Create(dp.elasticsearchIndex, docBucketPath, bytes.NewReader(payload))
+	log.Printf("DEBUG: ES response: %v", esResp)
+	if err != nil {
+		log.Printf("An error occured while storing document: %v", err)
+	}
+
 	return err
 }
 
 func (dp *DocumentProcessor) ensureIndicies(es *elasticsearch.Client) error {
 	//we cant be sure that the elasticsearch index (& mappings) already exist, so we have to check if they exist on every document insertion.
 
-	_, err := es.Indices.Exists([]string{dp.elasticsearchIndex})
-	if err == nil {
+	log.Printf("Attempting to create %s index, if it does not exist", dp.elasticsearchIndex)
+	resp, err := es.Indices.Exists([]string{dp.elasticsearchIndex})
+	log.Printf("=====> DEBUG: %v \n %v", resp, err)
+	if err == nil && resp.StatusCode == 200 {
 		//index exists, do nothing
-
+		log.Println("Index already exists, skipping.")
 		return nil
 	}
 
 	//index does not exist, lets create it
-	mappings, err := dp.mappings.Find("settings.json")
+	log.Printf("DEBUG: looking for setttings.json in mappings....")
+	mappings, err := dp.mappings.FindString("settings.json")
 	if err != nil {
+		log.Printf("COULD NOT FIND MAPPING FOR settings.json: %v, %v", mappings, err)
 		return err
 	}
-	mappingsReader := bytes.NewReader(mappings)
+	log.Printf("DEBUG: Found settings.json: %v", mappings)
+	mappingsReader := strings.NewReader(mappings)
 
 	_, err = es.Indices.Create(dp.elasticsearchIndex, es.Indices.Create.WithBody(mappingsReader))
 	return err
@@ -234,7 +306,7 @@ func (dp *DocumentProcessor) parseTikaMetadata(metaJson string, doc *model.Docum
 		Source:      dp.findString(parsedMeta, "source"),
 		Type:        dp.findString(parsedMeta, "type"),
 		Description: dp.findString(parsedMeta, "description", "subject", "dc:description", "cp:subject", "pdf:docinfo:subject"),
-		Created:     dp.findString(parsedMeta, "created", "Creation-Date"),
+		//Created:    time.Time  dp.findString(parsedMeta, "created", "Creation-Date"),
 		//PrintDate    time.Time `json:"print_date"`
 		//MetadataDate time.Time `json:"metadata_date"`
 		Latitude:  dp.findString(parsedMeta, "latitude", "Latitude"),

@@ -90,7 +90,7 @@ func (n *AmqpListen) Subscribe(processor func(body []byte) error) error {
 		for d := range msgs {
 			log.Printf(" [x] %s", d.Body)
 			if err := processor(d.Body); err != nil {
-				log.Printf("Error when processing document %s", err)
+				log.Printf("Error when processing document: %s", err)
 				//TODO: add to the dead letter queue (for further processing later)
 			}
 		}

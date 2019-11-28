@@ -80,7 +80,7 @@
           "indexed_chars": {
             "type": "long"
           },
-          "indexing_date": {
+          "indexed_date": {
             "type": "date",
             "format": "dateOptionalTime"
           },

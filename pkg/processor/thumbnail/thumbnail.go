@@ -146,8 +146,7 @@ func generateThumbnail(docFilePath string, outputDirectory string) (string, erro
 func uploadThumbnail(storageEndpoint *url.URL, storageBucket string, storagePath string, thumbFilePath string) error {
 
 	//convert extension to jpg before uploading
-	ext := path.Ext(storagePath)
-	storagePath = storagePath[0:len(storagePath)-len(ext)] + ".jpg"
+	thumbStoragePath := processor.GenerateThumbnailStoragePath(storagePath)
 
 	secureProtocol := storageEndpoint.Scheme == "https"
 
@@ -156,7 +155,7 @@ func uploadThumbnail(storageEndpoint *url.URL, storageBucket string, storagePath
 		return err
 	}
 
-	if _, err := s3Client.FPutObject(storageBucket, storagePath, thumbFilePath, minio.PutObjectOptions{
+	if _, err := s3Client.FPutObject(storageBucket, thumbStoragePath, thumbFilePath, minio.PutObjectOptions{
 		ContentType: "image/jpeg",
 	}); err != nil {
 		return err

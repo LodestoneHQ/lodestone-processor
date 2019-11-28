@@ -5,6 +5,7 @@ import (
 	"github.com/minio/minio-go/v6"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 )
 
@@ -67,4 +68,10 @@ func RetrieveDocument(storageEndpoint *url.URL, storageBucket string, storagePat
 	err = s3Client.FGetObject(storageBucket, storagePath, localFilepath, minio.GetObjectOptions{})
 
 	return localFilepath, err
+}
+
+func GenerateThumbnailStoragePath(storagePath string) string {
+	ext := path.Ext(storagePath)
+	storagePath = storagePath[0:len(storagePath)-len(ext)] + ".jpg"
+	return storagePath
 }
