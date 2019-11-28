@@ -1,7 +1,7 @@
 ---
 engine_enable_code_mutation: true
 
-dependencies_step:
+mgr_dependencies_step:
   pre:
     - 'go get -u github.com/gobuffalo/packr/packr'
 
