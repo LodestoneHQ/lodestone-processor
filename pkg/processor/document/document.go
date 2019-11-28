@@ -31,7 +31,7 @@ type DocumentProcessor struct {
 	tikaEndpoint          *url.URL
 	elasticsearchEndpoint *url.URL
 	elasticsearchIndex    string
-	mappings              packr.Box
+	mappings              *packr.Box
 }
 
 func CreateDocumentProcessor(storageEndpoint string, tikaEndpoint string, elasticsearchEndpoint string, elasticsearchIndex string) (DocumentProcessor, error) {
@@ -51,14 +51,14 @@ func CreateDocumentProcessor(storageEndpoint string, tikaEndpoint string, elasti
 		return DocumentProcessor{}, err
 	}
 
-	box := packr.NewBox("../static/document-processor")
+	box := packr.NewBox("../../../static/document-processor")
 
 	dp := DocumentProcessor{
 		storageEndpoint:       storageEndpointUrl,
 		tikaEndpoint:          tikaEndpointUrl,
 		elasticsearchEndpoint: elasticsearchEndpointUrl,
 		elasticsearchIndex:    elasticsearchIndex,
-		mappings:              box,
+		mappings:              &box,
 	}
 
 	return dp, nil
@@ -190,7 +190,7 @@ func (dp *DocumentProcessor) parseDocument(bucketName string, bucketPath string,
 		Content: docContent,
 		File: model.DocFile{
 			FileName:     fileStat.Name(),
-			Extension:    path.Ext(fileStat.Name()),
+			Extension:    strings.TrimPrefix(path.Ext(fileStat.Name()), "."),
 			Filesize:     fileStat.Size(),
 			IndexedChars: int64(len(docContent)),
 			IndexedDate:  time.Now(),
@@ -258,19 +258,24 @@ func (dp *DocumentProcessor) storeDocument(docBucketPath string, document model.
 func (dp *DocumentProcessor) ensureIndicies(es *elasticsearch.Client) error {
 	//we cant be sure that the elasticsearch index (& mappings) already exist, so we have to check if they exist on every document insertion.
 
-	_, err := es.Indices.Exists([]string{dp.elasticsearchIndex})
-	if err == nil {
+	log.Printf("Attempting to create %s index, if it does not exist", dp.elasticsearchIndex)
+	resp, err := es.Indices.Exists([]string{dp.elasticsearchIndex})
+	log.Printf("=====> DEBUG: %v \n %v", resp, err)
+	if err == nil && resp.StatusCode == 200 {
 		//index exists, do nothing
 		log.Println("Index already exists, skipping.")
 		return nil
 	}
 
 	//index does not exist, lets create it
-	mappings, err := dp.mappings.Find("settings.json")
+	log.Printf("DEBUG: looking for setttings.json in mappings....")
+	mappings, err := dp.mappings.FindString("settings.json")
 	if err != nil {
+		log.Printf("COULD NOT FIND MAPPING FOR settings.json: %v, %v", mappings, err)
 		return err
 	}
-	mappingsReader := bytes.NewReader(mappings)
+	log.Printf("DEBUG: Found settings.json: %v", mappings)
+	mappingsReader := strings.NewReader(mappings)
 
 	_, err = es.Indices.Create(dp.elasticsearchIndex, es.Indices.Create.WithBody(mappingsReader))
 	return err
@@ -301,7 +306,7 @@ func (dp *DocumentProcessor) parseTikaMetadata(metaJson string, doc *model.Docum
 		Source:      dp.findString(parsedMeta, "source"),
 		Type:        dp.findString(parsedMeta, "type"),
 		Description: dp.findString(parsedMeta, "description", "subject", "dc:description", "cp:subject", "pdf:docinfo:subject"),
-		Created:     dp.findString(parsedMeta, "created", "Creation-Date"),
+		//Created:    time.Time  dp.findString(parsedMeta, "created", "Creation-Date"),
 		//PrintDate    time.Time `json:"print_date"`
 		//MetadataDate time.Time `json:"metadata_date"`
 		Latitude:  dp.findString(parsedMeta, "latitude", "Latitude"),

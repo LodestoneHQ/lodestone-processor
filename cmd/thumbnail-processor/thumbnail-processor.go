@@ -18,8 +18,8 @@ var goarch string
 
 func main() {
 	app := &cli.App{
-		Name:     "lodestone-document-processor",
-		Usage:    "Notification processor for lodestone",
+		Name:     "lodestone-thumbnail-processor",
+		Usage:    "Thumbnail processor for lodestone",
 		Version:  version.VERSION,
 		Compiled: time.Now(),
 		Authors: []cli.Author{

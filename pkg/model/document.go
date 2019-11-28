@@ -27,13 +27,13 @@ type DocLodestone struct {
 type DocFile struct {
 	ContentType  string    `json:"content_type"`
 	FileName     string    `json:"filename"`
-	Extension    string    `json:"extension"`
+	Extension    string    `json:"extension"` //does not include .
 	Filesize     int64     `json:"filesize"`
 	IndexedChars int64     `json:"indexed_chars"`
-	IndexedDate  time.Time `json:"indexed_date"`
-	Created      time.Time `json:"created"`
-	LastModified time.Time `json:"last_modified"`
-	LastAccessed time.Time `json:"last_accessed"`
+	IndexedDate  time.Time `json:"indexed_date,omitempty"`
+	Created      time.Time `json:"created,omitempty"`
+	LastModified time.Time `json:"last_modified,omitempty"`
+	LastAccessed time.Time `json:"last_accessed,omitempty"`
 	Checksum     string    `json:"checksum"`
 
 	Group string `json:"group"`
@@ -49,7 +49,7 @@ type DocStorage struct {
 
 type DocMeta struct {
 	Author       string    `json:"author"`
-	Date         string    `json:"date"`
+	Date         string    `json:"date,omitempty"`
 	Keywords     []string  `json:"keywords"`
 	Title        string    `json:"title"`
 	Language     string    `json:"language"`
@@ -64,9 +64,9 @@ type DocMeta struct {
 	Source       string    `json:"source"`
 	Type         string    `json:"type"`
 	Description  string    `json:"description"`
-	Created      string    `json:"created"`
-	PrintDate    time.Time `json:"print_date"`
-	MetadataDate time.Time `json:"metadata_date"`
+	Created      time.Time `json:"created,omitempty"`
+	PrintDate    time.Time `json:"print_date,omitempty"`
+	MetadataDate time.Time `json:"metadata_date,omitempty"`
 	Latitude     string    `json:"latitude"`
 	Longitude    string    `json:"longitude"`
 	Altitude     string    `json:"altitude"`
