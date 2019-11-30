@@ -20,7 +20,7 @@ type Document struct {
 }
 
 type DocLodestone struct {
-	Tags     []string `json:"tags,omitempty"`
+	Tags     []string `json:"tags"`
 	Bookmark bool     `json:"bookmark"`
 }
 

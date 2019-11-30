@@ -186,10 +186,11 @@ func (dp *DocumentProcessor) parseDocument(bucketName string, bucketPath string,
 	}
 
 	doc := model.Document{
-		ID:      bucketPath,
+		//ID length limit is 512 bytes, cant use path or base64 here. instead we'll use the document checksum value.
+		ID:      sha256Checksum,
 		Content: docContent,
 		Lodestone: model.DocLodestone{
-			Tags:     []string{},
+			Tags:     []string{}, //TODO:remove this placeholder tag.
 			Bookmark: false,
 		},
 		File: model.DocFile{
@@ -250,7 +251,7 @@ func (dp *DocumentProcessor) storeDocument(docBucketPath string, document model.
 	}
 
 	log.Println("Attempting to store new document in elasticsearch")
-	esResp, err := es.Create(dp.elasticsearchIndex, docBucketPath, bytes.NewReader(payload))
+	esResp, err := es.Create(dp.elasticsearchIndex, document.ID, bytes.NewReader(payload))
 	log.Printf("DEBUG: ES response: %v", esResp)
 	if err != nil {
 		log.Printf("An error occured while storing document: %v", err)
