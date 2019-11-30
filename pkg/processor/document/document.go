@@ -188,6 +188,10 @@ func (dp *DocumentProcessor) parseDocument(bucketName string, bucketPath string,
 	doc := model.Document{
 		ID:      bucketPath,
 		Content: docContent,
+		Lodestone: model.DocLodestone{
+			Tags:     []string{},
+			Bookmark: false,
+		},
 		File: model.DocFile{
 			FileName:     fileStat.Name(),
 			Extension:    strings.TrimPrefix(path.Ext(fileStat.Name()), "."),
