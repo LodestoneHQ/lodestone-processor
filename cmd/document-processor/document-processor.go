@@ -7,8 +7,8 @@ import (
 	"github.com/analogj/lodestone-processor/pkg/processor/document"
 	"github.com/analogj/lodestone-processor/pkg/version"
 	"github.com/fatih/color"
+	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
-	"log"
 	"os"
 	"time"
 )
@@ -53,6 +53,12 @@ func main() {
 				Usage: "Start the Lodestone document processor",
 				Action: func(c *cli.Context) error {
 
+					if c.Bool("debug") {
+						log.SetLevel(log.DebugLevel)
+					} else {
+						log.SetLevel(log.InfoLevel)
+					}
+
 					var listenClient listen.Interface
 
 					listenClient = new(listen.AmqpListen)
@@ -68,6 +74,7 @@ func main() {
 
 					documentProcessor, err := document.CreateDocumentProcessor(
 						c.String("storage-endpoint"),
+						c.String("storage-thumbnail-bucket"),
 						c.String("tika-endpoint"),
 						c.String("elasticsearch-endpoint"),
 						c.String("elasticsearch-index"),
@@ -85,6 +92,11 @@ func main() {
 						Name:  "storage-endpoint",
 						Usage: "The storage server endpoint",
 						Value: "http://storage:9000",
+					},
+					&cli.StringFlag{
+						Name:  "storage-thumbnail-bucket",
+						Usage: "The thumbnail bucket on the storage server",
+						Value: "thumbnails",
 					},
 
 					&cli.StringFlag{
@@ -119,6 +131,11 @@ func main() {
 						Name:  "amqp-queue",
 						Usage: "The amqp queue",
 						Value: "documents",
+					},
+
+					&cli.BoolFlag{
+						Name:  "debug",
+						Usage: "Enable debug logging",
 					},
 				},
 			},

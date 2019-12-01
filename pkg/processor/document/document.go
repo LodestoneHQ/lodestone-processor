@@ -11,9 +11,9 @@ import (
 	"github.com/analogj/lodestone-processor/pkg/processor"
 	"github.com/elastic/go-elasticsearch/v7"
 	"github.com/gobuffalo/packr"
+	log "github.com/sirupsen/logrus"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -27,14 +27,15 @@ import (
 import "github.com/google/go-tika/tika"
 
 type DocumentProcessor struct {
-	storageEndpoint       *url.URL
-	tikaEndpoint          *url.URL
-	elasticsearchEndpoint *url.URL
-	elasticsearchIndex    string
-	mappings              *packr.Box
+	storageEndpoint        *url.URL
+	storageThumbnailBucket string
+	tikaEndpoint           *url.URL
+	elasticsearchEndpoint  *url.URL
+	elasticsearchIndex     string
+	mappings               *packr.Box
 }
 
-func CreateDocumentProcessor(storageEndpoint string, tikaEndpoint string, elasticsearchEndpoint string, elasticsearchIndex string) (DocumentProcessor, error) {
+func CreateDocumentProcessor(storageEndpoint string, storageThumbnailBucket string, tikaEndpoint string, elasticsearchEndpoint string, elasticsearchIndex string) (DocumentProcessor, error) {
 
 	storageEndpointUrl, err := url.Parse(storageEndpoint)
 	if err != nil {
@@ -54,11 +55,12 @@ func CreateDocumentProcessor(storageEndpoint string, tikaEndpoint string, elasti
 	box := packr.NewBox("../../../static/document-processor")
 
 	dp := DocumentProcessor{
-		storageEndpoint:       storageEndpointUrl,
-		tikaEndpoint:          tikaEndpointUrl,
-		elasticsearchEndpoint: elasticsearchEndpointUrl,
-		elasticsearchIndex:    elasticsearchIndex,
-		mappings:              &box,
+		storageEndpoint:        storageEndpointUrl,
+		storageThumbnailBucket: storageThumbnailBucket,
+		tikaEndpoint:           tikaEndpointUrl,
+		elasticsearchEndpoint:  elasticsearchEndpointUrl,
+		elasticsearchIndex:     elasticsearchIndex,
+		mappings:               &box,
 	}
 
 	return dp, nil
@@ -89,33 +91,20 @@ func (dp *DocumentProcessor) Process(body []byte) error {
 		return err
 	}
 
-	//TODO pass document to TIKA
+	//pass document to TIKA
 	doc, err := dp.parseDocument(docBucketName, docBucketPath, filePath)
 	if err != nil {
 		return err
 	}
 
-	err = dp.storeDocument(docBucketPath, doc)
+	//store document in Elasticsearch
+	err = dp.storeDocument(doc)
 	if err != nil {
 		return err
 	}
 
 	return nil
 }
-
-type TikaRoundTripper struct {
-	r http.RoundTripper
-}
-
-// https://cwiki.apache.org/confluence/display/tika/TikaJAXRS#TikaJAXRS-MultipartSupport TIKA must have an Accept header to return JSON responses.
-func (mrt TikaRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
-	if r.URL.Path == "/meta" {
-		r.Header.Add("Accept", "application/json")
-	}
-
-	return mrt.r.RoundTrip(r)
-}
-
 func (dp *DocumentProcessor) tikaHttpClient() *http.Client {
 	client := &http.Client{
 		Timeout:   time.Second * 10,
@@ -138,7 +127,7 @@ func (dp *DocumentProcessor) parseDocument(bucketName string, bucketPath string,
 	if err != nil {
 		return model.Document{}, err
 	}
-	log.Printf("docContent: %s", docContent)
+	log.Debugf("docContent: %s", docContent)
 
 	metaFile, err := os.Open(localFilePath)
 	if err != nil {
@@ -150,7 +139,7 @@ func (dp *DocumentProcessor) parseDocument(bucketName string, bucketPath string,
 	if err != nil {
 		return model.Document{}, err
 	}
-	log.Printf("metaJson: %s", metaJson)
+	log.Debugf("metaJson: %s", metaJson)
 
 	fileStat, err := os.Stat(localFilePath)
 	if err != nil {
@@ -211,7 +200,7 @@ func (dp *DocumentProcessor) parseDocument(bucketName string, bucketPath string,
 		Storage: model.DocStorage{
 			Path:        bucketPath,
 			Bucket:      bucketName,
-			ThumbBucket: "thumbnails",
+			ThumbBucket: dp.storageThumbnailBucket,
 			ThumbPath:   processor.GenerateThumbnailStoragePath(bucketPath),
 		},
 	}
@@ -223,7 +212,7 @@ func (dp *DocumentProcessor) parseDocument(bucketName string, bucketPath string,
 }
 
 //store document in elasticsearch
-func (dp *DocumentProcessor) storeDocument(docBucketPath string, document model.Document) error {
+func (dp *DocumentProcessor) storeDocument(document model.Document) error {
 	// use https://github.com/elastic/go-elasticsearch
 	// first migrate capsulecd to support mod
 
@@ -236,8 +225,8 @@ func (dp *DocumentProcessor) storeDocument(docBucketPath string, document model.
 		return err
 	}
 
-	log.Println(elasticsearch.Version)
-	log.Println(es.Info())
+	log.Debugln(elasticsearch.Version)
+	log.Debugln(es.Info())
 
 	err = dp.ensureIndicies(es)
 	if err != nil {
@@ -252,7 +241,7 @@ func (dp *DocumentProcessor) storeDocument(docBucketPath string, document model.
 
 	log.Println("Attempting to store new document in elasticsearch")
 	esResp, err := es.Create(dp.elasticsearchIndex, document.ID, bytes.NewReader(payload))
-	log.Printf("DEBUG: ES response: %v", esResp)
+	log.Debugf("DEBUG: ES response: %v", esResp)
 	if err != nil {
 		log.Printf("An error occured while storing document: %v", err)
 	}
@@ -265,7 +254,7 @@ func (dp *DocumentProcessor) ensureIndicies(es *elasticsearch.Client) error {
 
 	log.Printf("Attempting to create %s index, if it does not exist", dp.elasticsearchIndex)
 	resp, err := es.Indices.Exists([]string{dp.elasticsearchIndex})
-	log.Printf("=====> DEBUG: %v \n %v", resp, err)
+	log.Debugf("=====> DEBUG: %v \n %v", resp, err)
 	if err == nil && resp.StatusCode == 200 {
 		//index exists, do nothing
 		log.Println("Index already exists, skipping.")
@@ -273,13 +262,13 @@ func (dp *DocumentProcessor) ensureIndicies(es *elasticsearch.Client) error {
 	}
 
 	//index does not exist, lets create it
-	log.Printf("DEBUG: looking for setttings.json in mappings....")
+	log.Debugf("DEBUG: looking for settings.json in mappings....")
 	mappings, err := dp.mappings.FindString("settings.json")
 	if err != nil {
 		log.Printf("COULD NOT FIND MAPPING FOR settings.json: %v, %v", mappings, err)
 		return err
 	}
-	log.Printf("DEBUG: Found settings.json: %v", mappings)
+	log.Debugf("DEBUG: Found settings.json: %v", mappings)
 	mappingsReader := strings.NewReader(mappings)
 
 	_, err = es.Indices.Create(dp.elasticsearchIndex, es.Indices.Create.WithBody(mappingsReader))

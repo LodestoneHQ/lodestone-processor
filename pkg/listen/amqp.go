@@ -2,8 +2,8 @@ package listen
 
 import (
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"github.com/streadway/amqp"
-	"log"
 )
 
 type AmqpListen struct {
