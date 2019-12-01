@@ -7,8 +7,8 @@ import (
 	"github.com/analogj/lodestone-processor/pkg/processor/thumbnail"
 	"github.com/analogj/lodestone-processor/pkg/version"
 	"github.com/fatih/color"
+	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
-	"log"
 	"os"
 	"time"
 )
@@ -52,6 +52,11 @@ func main() {
 				Name:  "start",
 				Usage: "Start the Lodestone thumbnail processor",
 				Action: func(c *cli.Context) error {
+					if c.Bool("debug") {
+						log.SetLevel(log.DebugLevel)
+					} else {
+						log.SetLevel(log.InfoLevel)
+					}
 
 					var listenClient listen.Interface
 
@@ -97,6 +102,11 @@ func main() {
 						Name:  "amqp-queue",
 						Usage: "The amqp queue",
 						Value: "thumbnails",
+					},
+
+					&cli.BoolFlag{
+						Name:  "debug",
+						Usage: "Enable debug logging",
 					},
 				},
 			},
