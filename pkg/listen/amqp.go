@@ -30,6 +30,42 @@ func (n *AmqpListen) Init(config map[string]string) error {
 	}
 	n.channel = ch
 
+	//define the deadletter queue
+	err = ch.ExchangeDeclare(
+		"errors",
+		"fanout",
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+	if err != nil {
+		return err
+	}
+	_, err = ch.QueueDeclare(
+		"errors", // name
+		true,     // durable
+		false,    // delete when unused
+		false,    // exclusive
+		false,    // no-wait
+		nil,      // arguments
+	)
+	if err != nil {
+		return err
+	}
+	err = n.channel.QueueBind(
+		"errors", // queue name
+		"",       // routing key
+		"errors", // exchange
+		false,
+		nil)
+	if err != nil {
+		return err
+	}
+
+	//define active exchange & queue
+
 	err = ch.ExchangeDeclare(
 		n.exchange,
 		"fanout",
@@ -43,13 +79,18 @@ func (n *AmqpListen) Init(config map[string]string) error {
 		return err
 	}
 
+	//setup dead-letter queu
+	args := make(amqp.Table)
+	args["x-dead-letter-exchange"] = "errors"
+	args["x-dead-letter-routing-key"] = n.queue
+
 	_, err = ch.QueueDeclare(
 		n.queue, // name
 		false,   // durable
 		false,   // delete when unused
 		false,   // exclusive
 		false,   // no-wait
-		nil,     // arguments
+		args,    // arguments
 	)
 	if err != nil {
 		return err
@@ -74,7 +115,7 @@ func (n *AmqpListen) Subscribe(processor func(body []byte) error) error {
 	msgs, err := n.channel.Consume(
 		n.queue, // queue
 		"",      // consumer
-		true,    // auto-ack
+		false,   // auto-ack
 		false,   // exclusive
 		false,   // no-local
 		false,   // no-wait
@@ -91,7 +132,15 @@ func (n *AmqpListen) Subscribe(processor func(body []byte) error) error {
 			log.Printf(" [x] %s", d.Body)
 			if err := processor(d.Body); err != nil {
 				log.Printf("Error when processing document: %s", err)
-				//TODO: add to the dead letter queue (for further processing later)
+
+				//add to the dead letter queue (for further processing later)
+				if err := d.Reject(false); err != nil {
+					log.Printf("Error while adding document to dead-letter-queue")
+				}
+			} else {
+				if err := d.Ack(false); err != nil {
+					log.Printf("Error while notifying successful processing")
+				}
 			}
 		}
 	}()

@@ -235,7 +235,7 @@ func (dp *DocumentProcessor) storeDocument(document model.Document) error {
 
 	payload, err := json.Marshal(document)
 	if err != nil {
-		log.Printf("An error occured while json encoding Document: %v", err)
+		log.Printf("An error occurred while json encoding Document: %v", err)
 		return err
 	}
 
@@ -243,7 +243,7 @@ func (dp *DocumentProcessor) storeDocument(document model.Document) error {
 	esResp, err := es.Create(dp.elasticsearchIndex, document.ID, bytes.NewReader(payload))
 	log.Debugf("DEBUG: ES response: %v", esResp)
 	if err != nil {
-		log.Printf("An error occured while storing document: %v", err)
+		log.Printf("An error occurred while storing document: %v", err)
 	}
 
 	return err
