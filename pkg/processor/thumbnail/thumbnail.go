@@ -11,7 +11,6 @@ import (
 	"math"
 	"net/url"
 	"os"
-	"path"
 	"path/filepath"
 )
 
@@ -132,10 +131,9 @@ func generateThumbnail(docFilePath string, outputDirectory string) (string, erro
 		return "", err
 	}
 
-	//get base filename and change the file extension.
+	//get base filename and append the jpg file extension.
 	fileName := filepath.Base(docFilePath)
-	ext := path.Ext(fileName)
-	fileName = fileName[0:len(fileName)-len(ext)] + ".jpg"
+	fileName = fileName + ".jpg"
 
 	outputFilePath := filepath.Join(outputDirectory, fileName)
 	err = mw.WriteImage(outputFilePath)
