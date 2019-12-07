@@ -22,9 +22,9 @@ require (
 	github.com/streadway/amqp v0.0.0-20190827072141-edfb9018d271
 	github.com/stretchr/testify v1.4.0
 	github.com/urfave/cli v1.19.1
-	golang.org/x/crypto v0.0.0-20191202143827-86a70503ff7e // indirect
+	golang.org/x/crypto v0.0.0-20191206172530-e9b2fee46413 // indirect
 	golang.org/x/net v0.0.0-20191116160921-f9c825593386 // indirect
-	golang.org/x/sys v0.0.0-20191128015809-6d18c012aee9 // indirect
+	golang.org/x/sys v0.0.0-20191206220618-eeba5f6aabab // indirect
 	golang.org/x/text v0.3.2 // indirect
 	gopkg.in/gographics/imagick.v2 v2.5.0
 	gopkg.in/ini.v1 v1.51.0 // indirect

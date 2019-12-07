@@ -19,6 +19,7 @@ import (
 	"os"
 	"os/user"
 	"path"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"syscall"
@@ -174,12 +175,16 @@ func (dp *DocumentProcessor) parseDocument(bucketName string, bucketPath string,
 		usrName = usr.Name
 	}
 
+	//convert the filepath into "tags"
+	bucketPathDir, _ := filepath.Split(bucketPath)
+	bucketPathTags := strings.Split(bucketPathDir, "/")
+
 	doc := model.Document{
 		//ID length limit is 512 bytes, cant use path or base64 here. instead we'll use the document checksum value.
 		ID:      sha256Checksum,
 		Content: docContent,
 		Lodestone: model.DocLodestone{
-			Tags:     []string{}, //TODO:remove this placeholder tag.
+			Tags:     deleteEmpty(bucketPathTags), //[]string{}, //TODO:remove this placeholder tag.
 			Bookmark: false,
 		},
 		File: model.DocFile{
@@ -403,3 +408,13 @@ func castToStringArray(val interface{}) []string {
 //func stringHasValue(str string) bool {
 //	return str != ""
 //}
+
+func deleteEmpty(s []string) []string {
+	var r []string
+	for _, str := range s {
+		if str != "" {
+			r = append(r, str)
+		}
+	}
+	return r
+}
