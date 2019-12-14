@@ -24,7 +24,7 @@ require (
 	github.com/urfave/cli v1.19.1
 	golang.org/x/crypto v0.0.0-20191206172530-e9b2fee46413 // indirect
 	golang.org/x/net v0.0.0-20191116160921-f9c825593386 // indirect
-	golang.org/x/sys v0.0.0-20191206220618-eeba5f6aabab // indirect
+	golang.org/x/sys v0.0.0-20191210023423-ac6580df4449 // indirect
 	golang.org/x/text v0.3.2 // indirect
 	gopkg.in/gographics/imagick.v2 v2.5.0
 	gopkg.in/ini.v1 v1.51.0 // indirect
