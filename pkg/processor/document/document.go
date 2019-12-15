@@ -1,6 +1,7 @@
 package document
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"crypto/sha256"
@@ -9,6 +10,7 @@ import (
 	"fmt"
 	"github.com/analogj/lodestone-processor/pkg/model"
 	"github.com/analogj/lodestone-processor/pkg/processor"
+	"github.com/analogj/lodestone-processor/pkg/version"
 	"github.com/elastic/go-elasticsearch/v7"
 	"github.com/gobuffalo/packr"
 	log "github.com/sirupsen/logrus"
@@ -28,15 +30,17 @@ import (
 import "github.com/google/go-tika/tika"
 
 type DocumentProcessor struct {
-	storageEndpoint        *url.URL
-	storageThumbnailBucket string
-	tikaEndpoint           *url.URL
-	elasticsearchEndpoint  *url.URL
-	elasticsearchIndex     string
-	mappings               *packr.Box
+	storageEndpoint              *url.URL
+	storageThumbnailBucket       string
+	tikaEndpoint                 *url.URL
+	elasticsearchEndpoint        *url.URL
+	elasticsearchIndex           string
+	elasticsearchMappingOverride string
+	elasticsearchClient          *elasticsearch.Client
+	mappings                     *packr.Box
 }
 
-func CreateDocumentProcessor(storageEndpoint string, storageThumbnailBucket string, tikaEndpoint string, elasticsearchEndpoint string, elasticsearchIndex string) (DocumentProcessor, error) {
+func CreateDocumentProcessor(storageEndpoint string, storageThumbnailBucket string, tikaEndpoint string, elasticsearchEndpoint string, elasticsearchIndex string, elasticsearchMapping string) (DocumentProcessor, error) {
 
 	storageEndpointUrl, err := url.Parse(storageEndpoint)
 	if err != nil {
@@ -56,12 +60,33 @@ func CreateDocumentProcessor(storageEndpoint string, storageThumbnailBucket stri
 	box := packr.NewBox("../../../static/document-processor")
 
 	dp := DocumentProcessor{
-		storageEndpoint:        storageEndpointUrl,
-		storageThumbnailBucket: storageThumbnailBucket,
-		tikaEndpoint:           tikaEndpointUrl,
-		elasticsearchEndpoint:  elasticsearchEndpointUrl,
-		elasticsearchIndex:     elasticsearchIndex,
-		mappings:               &box,
+		storageEndpoint:              storageEndpointUrl,
+		storageThumbnailBucket:       storageThumbnailBucket,
+		tikaEndpoint:                 tikaEndpointUrl,
+		elasticsearchEndpoint:        elasticsearchEndpointUrl,
+		elasticsearchIndex:           elasticsearchIndex,
+		elasticsearchMappingOverride: elasticsearchMapping,
+		mappings:                     &box,
+	}
+
+	//ensure the elastic search index exists (do this once on startup)
+	cfg := elasticsearch.Config{
+		Addresses: []string{dp.elasticsearchEndpoint.String()},
+	}
+
+	es, err := elasticsearch.NewClient(cfg)
+	if err != nil {
+		return DocumentProcessor{}, err
+	}
+	dp.elasticsearchClient = es
+
+	log.Debugln("Connect to ElasticSearch & ensure indicies exist")
+	log.Debugln(elasticsearch.Version)
+	log.Debugln(es.Info())
+
+	err = dp.ensureIndicies()
+	if err != nil {
+		return DocumentProcessor{}, err
 	}
 
 	return dp, nil
@@ -184,8 +209,10 @@ func (dp *DocumentProcessor) parseDocument(bucketName string, bucketPath string,
 		ID:      sha256Checksum,
 		Content: docContent,
 		Lodestone: model.DocLodestone{
-			Tags:     deleteEmpty(bucketPathTags), //[]string{}, //TODO:remove this placeholder tag.
-			Bookmark: false,
+			ProcessorVersion: version.VERSION,
+			Title:            "",
+			Tags:             deleteEmpty(bucketPathTags),
+			Bookmark:         false,
 		},
 		File: model.DocFile{
 			FileName:     fileStat.Name(),
@@ -211,8 +238,6 @@ func (dp *DocumentProcessor) parseDocument(bucketName string, bucketPath string,
 	}
 
 	err = dp.parseTikaMetadata(metaJson, &doc)
-
-	log.Printf("PARSED DOCUMENT -> %v", doc)
 	return doc, err
 }
 
@@ -221,23 +246,6 @@ func (dp *DocumentProcessor) storeDocument(document model.Document) error {
 	// use https://github.com/elastic/go-elasticsearch
 	// first migrate capsulecd to support mod
 
-	cfg := elasticsearch.Config{
-		Addresses: []string{dp.elasticsearchEndpoint.String()},
-	}
-
-	es, err := elasticsearch.NewClient(cfg)
-	if err != nil {
-		return err
-	}
-
-	log.Debugln(elasticsearch.Version)
-	log.Debugln(es.Info())
-
-	err = dp.ensureIndicies(es)
-	if err != nil {
-		return err
-	}
-
 	payload, err := json.Marshal(document)
 	if err != nil {
 		log.Printf("An error occurred while json encoding Document: %v", err)
@@ -245,7 +253,7 @@ func (dp *DocumentProcessor) storeDocument(document model.Document) error {
 	}
 
 	log.Println("Attempting to store new document in elasticsearch")
-	esResp, err := es.Create(dp.elasticsearchIndex, document.ID, bytes.NewReader(payload))
+	esResp, err := dp.elasticsearchClient.Create(dp.elasticsearchIndex, document.ID, bytes.NewReader(payload))
 	log.Debugf("DEBUG: ES response: %v", esResp)
 	if err != nil {
 		log.Printf("An error occurred while storing document: %v", err)
@@ -254,12 +262,12 @@ func (dp *DocumentProcessor) storeDocument(document model.Document) error {
 	return err
 }
 
-func (dp *DocumentProcessor) ensureIndicies(es *elasticsearch.Client) error {
+func (dp *DocumentProcessor) ensureIndicies() error {
 	//we cant be sure that the elasticsearch index (& mappings) already exist, so we have to check if they exist on every document insertion.
 
 	log.Printf("Attempting to create %s index, if it does not exist", dp.elasticsearchIndex)
-	resp, err := es.Indices.Exists([]string{dp.elasticsearchIndex})
-	log.Debugf("=====> DEBUG: %v \n %v", resp, err)
+	resp, err := dp.elasticsearchClient.Indices.Exists([]string{dp.elasticsearchIndex})
+	log.Debugf("%v \n %v", resp, err)
 	if err == nil && resp.StatusCode == 200 {
 		//index exists, do nothing
 		log.Println("Index already exists, skipping.")
@@ -267,16 +275,26 @@ func (dp *DocumentProcessor) ensureIndicies(es *elasticsearch.Client) error {
 	}
 
 	//index does not exist, lets create it
-	log.Debugf("DEBUG: looking for settings.json in mappings....")
-	mappings, err := dp.mappings.FindString("settings.json")
-	if err != nil {
-		log.Printf("COULD NOT FIND MAPPING FOR settings.json: %v, %v", mappings, err)
-		return err
+	var mappingReader io.Reader
+	if len(dp.elasticsearchMappingOverride) > 0 {
+		f, err := os.Open(dp.elasticsearchMappingOverride)
+		if err != nil {
+			log.Printf("COULD NOT OPEN MAPPING OVERRIDE FILE: %v, %v", dp.elasticsearchMappingOverride, err)
+			return err
+		}
+		mappingReader = bufio.NewReader(f)
+	} else {
+		log.Debugf("looking for settings.json in mappings....")
+		mappings, err := dp.mappings.FindString("settings.json")
+		if err != nil {
+			log.Printf("COULD NOT FIND MAPPING FOR settings.json: %v, %v", mappings, err)
+			return err
+		}
+		log.Debugf("Found settings.json: %v", mappings)
+		mappingReader = strings.NewReader(mappings)
 	}
-	log.Debugf("DEBUG: Found settings.json: %v", mappings)
-	mappingsReader := strings.NewReader(mappings)
 
-	_, err = es.Indices.Create(dp.elasticsearchIndex, es.Indices.Create.WithBody(mappingsReader))
+	_, err = dp.elasticsearchClient.Indices.Create(dp.elasticsearchIndex, dp.elasticsearchClient.Indices.Create.WithBody(mappingReader))
 	return err
 }
 
