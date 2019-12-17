@@ -186,7 +186,7 @@ func (dp *DocumentProcessor) parseDocument(bucketName string, bucketPath string,
 
 	sysStat := fileStat.Sys().(*syscall.Stat_t)
 	AccessedTime := time.Unix(int64(sysStat.Atim.Sec), int64(sysStat.Atim.Nsec))
-	CreatedTIme := time.Unix(int64(sysStat.Ctim.Sec), int64(sysStat.Ctim.Nsec))
+	CreatedTime := time.Unix(int64(sysStat.Ctim.Sec), int64(sysStat.Ctim.Nsec))
 
 	grp, err := user.LookupGroupId(fmt.Sprintf("%d", sysStat.Gid))
 	grpName := ""
@@ -216,12 +216,12 @@ func (dp *DocumentProcessor) parseDocument(bucketName string, bucketPath string,
 		},
 		File: model.DocFile{
 			FileName:     fileStat.Name(),
-			Extension:    strings.TrimPrefix(path.Ext(fileStat.Name()), "."),
+			Extension:    strings.ToLower(strings.TrimPrefix(path.Ext(fileStat.Name()), ".")),
 			Filesize:     fileStat.Size(),
 			IndexedChars: int64(len(docContent)),
 			IndexedDate:  time.Now(),
 
-			Created:      CreatedTIme,
+			Created:      CreatedTime,
 			LastModified: fileStat.ModTime(),
 			LastAccessed: AccessedTime,
 			Checksum:     sha256Checksum,
