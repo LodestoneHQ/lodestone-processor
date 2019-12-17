@@ -53,6 +53,12 @@
       },
       "lodestone": {
         "properties": {
+          "processor_version": {
+            "type": "text"
+          },
+          "title":{
+            "type": "text"
+          },
           "tags": {
             "type": "keyword"
           },

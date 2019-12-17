@@ -78,6 +78,7 @@ func main() {
 						c.String("tika-endpoint"),
 						c.String("elasticsearch-endpoint"),
 						c.String("elasticsearch-index"),
+						c.String("elasticsearch-mapping"),
 					)
 
 					if err != nil {
@@ -114,7 +115,11 @@ func main() {
 						Usage: "The elasticsearch index to store documents in",
 						Value: "lodestone",
 					},
-
+					&cli.StringFlag{
+						Name:  "elasticsearch-mapping",
+						Usage: "Path to elasticsearch mapping file. Can be used to override static/document-processor/settings.json",
+						Value: "",
+					},
 					&cli.StringFlag{
 						Name:  "amqp-url",
 						Usage: "The amqp connection string",

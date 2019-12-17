@@ -20,8 +20,10 @@ type Document struct {
 }
 
 type DocLodestone struct {
-	Tags     []string `json:"tags"`
-	Bookmark bool     `json:"bookmark"`
+	ProcessorVersion string   `json:"processor_version"`
+	Title            string   `json:"title"`
+	Tags             []string `json:"tags"`
+	Bookmark         bool     `json:"bookmark"`
 }
 
 type DocFile struct {
