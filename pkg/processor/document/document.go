@@ -22,7 +22,6 @@ import (
 	"os/user"
 	"path"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"syscall"
 	"time"
@@ -308,7 +307,10 @@ func (dp *DocumentProcessor) parseTikaMetadata(metaJson string, doc *model.Docum
 	doc.File.ContentType = dp.findString(parsedMeta, "Content-Type", "content-type")
 	doc.Meta = model.DocMeta{
 		Author:      dp.findString(parsedMeta, "Author", "meta:author"),
-		Date:        dp.findString(parsedMeta, "Date"),
+		Date:        dp.findTime(parsedMeta, "Date"),
+		CreatedDate: dp.findTime(parsedMeta, "created", "Creation-Date", "meta:creation-date", "dcterms:created", "pdf:docinfo:created"),
+		SavedDate:   dp.findTime(parsedMeta, "Last-Save-Date", "meta:save-date"),
+
 		Keywords:    dp.findStringArray(parsedMeta, "Keywords", "meta:keyword", "pdf:docinfo:keywords"),
 		Title:       dp.findString(parsedMeta, "title", "dc:title", "cp:subject", "pdf:docinfo:title"),
 		Language:    dp.findString(parsedMeta, "language"),
@@ -323,16 +325,25 @@ func (dp *DocumentProcessor) parseTikaMetadata(metaJson string, doc *model.Docum
 		Source:      dp.findString(parsedMeta, "source"),
 		Type:        dp.findString(parsedMeta, "type"),
 		Description: dp.findString(parsedMeta, "description", "subject", "dc:description", "cp:subject", "pdf:docinfo:subject"),
-		//Created:    time.Time  dp.findString(parsedMeta, "created", "Creation-Date"),
-		//PrintDate    time.Time `json:"print_date"`
-		//MetadataDate time.Time `json:"metadata_date"`
-		Latitude:  dp.findString(parsedMeta, "latitude", "Latitude"),
-		Longitude: dp.findString(parsedMeta, "longitude", "Longitude"),
-		Altitude:  dp.findString(parsedMeta, "altitude"),
+		Latitude:    dp.findString(parsedMeta, "latitude", "Latitude"),
+		Longitude:   dp.findString(parsedMeta, "longitude", "Longitude"),
+		Altitude:    dp.findString(parsedMeta, "altitude"),
 		//Rating       byte      `json:"rating"`
 		Comments: dp.findString(parsedMeta, "comments"),
+		Pages:    dp.findString(parsedMeta, "xmpTPg:NPages"),
 	}
 	return nil
+}
+
+func (dp *DocumentProcessor) findTime(dict map[string]interface{}, keys ...string) time.Time {
+	for _, v := range keys {
+		val := castToTime(dict[v])
+		if !val.IsZero() {
+			return val
+		}
+	}
+
+	return time.Time{}
 }
 
 func (dp *DocumentProcessor) findStringArray(dict map[string]interface{}, keys ...string) []string {
@@ -355,84 +366,4 @@ func (dp *DocumentProcessor) findString(dict map[string]interface{}, keys ...str
 	}
 
 	return ""
-}
-
-func castToString(val interface{}) string {
-	rt := reflect.TypeOf(val)
-	if rt == nil {
-		return ""
-	}
-	switch rt.Kind() {
-	case reflect.Slice:
-		valSlice, ok := val.([]string)
-		if !ok {
-			log.Printf("%v is not a []string", val)
-			return ""
-		}
-		return fmt.Sprintf(strings.Join(valSlice, ", "))
-	case reflect.Array:
-		valSlice, ok := val.([]string)
-		if !ok {
-			log.Printf("%v is not an array", val)
-			return ""
-		}
-		return fmt.Sprintf(strings.Join(valSlice, ", "))
-	case reflect.String:
-		valStr, ok := val.(string)
-		if !ok {
-			log.Printf("%v is not a string", val)
-			return ""
-		}
-		return valStr
-	default:
-		return ""
-	}
-}
-
-func castToStringArray(val interface{}) []string {
-	rt := reflect.TypeOf(val)
-	if rt == nil {
-		return []string{}
-	}
-
-	switch rt.Kind() {
-	case reflect.Slice:
-		valSlice, ok := val.([]string)
-		if !ok {
-			log.Printf("%v is not a []string", val)
-			return []string{}
-		}
-		return valSlice
-	case reflect.Array:
-		valSlice, ok := val.([]string)
-		if !ok {
-			log.Printf("%v is not a []string", val)
-			return []string{}
-		}
-		return valSlice
-	case reflect.String:
-		valStr, ok := val.(string)
-		if !ok {
-			log.Printf("%v is not a string", val)
-			return []string{}
-		}
-
-		return []string{valStr}
-	default:
-		return nil
-	}
-}
-
-//func stringHasValue(str string) bool {
-//	return str != ""
-//}
-
-func deleteEmpty(s []string) []string {
-	var r []string
-	for _, str := range s {
-		if str != "" {
-			r = append(r, str)
-		}
-	}
-	return r
 }
