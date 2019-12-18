@@ -50,28 +50,29 @@ type DocStorage struct {
 }
 
 type DocMeta struct {
-	Author       string    `json:"author"`
-	Date         string    `json:"date,omitempty"`
-	Keywords     []string  `json:"keywords"`
-	Title        string    `json:"title"`
-	Language     string    `json:"language"`
-	Format       string    `json:"format"`
-	Identifier   string    `json:"identifier"`
-	Contributor  string    `json:"contributor"`
-	Modifier     string    `json:"modifier"`
-	CreatorTool  string    `json:"creator_tool"`
-	Publisher    string    `json:"publisher"`
-	Relation     string    `json:"relation"`
-	Rights       string    `json:"rights"`
-	Source       string    `json:"source"`
-	Type         string    `json:"type"`
-	Description  string    `json:"description"`
-	Created      time.Time `json:"created,omitempty"`
-	PrintDate    time.Time `json:"print_date,omitempty"`
-	MetadataDate time.Time `json:"metadata_date,omitempty"`
-	Latitude     string    `json:"latitude"`
-	Longitude    string    `json:"longitude"`
-	Altitude     string    `json:"altitude"`
-	Rating       byte      `json:"rating"`
-	Comments     string    `json:"comments"`
+	Author      string    `json:"author"`
+	CreatedDate time.Time `json:"created"`
+	SavedDate   time.Time `json:"saved"`
+	Date        time.Time `json:"date,omitempty"`
+
+	Keywords    []string `json:"keywords"`
+	Title       string   `json:"title"`
+	Language    string   `json:"language"`
+	Format      string   `json:"format"`
+	Identifier  string   `json:"identifier"`
+	Contributor string   `json:"contributor"`
+	Modifier    string   `json:"modifier"`
+	CreatorTool string   `json:"creator_tool"`
+	Publisher   string   `json:"publisher"`
+	Relation    string   `json:"relation"`
+	Rights      string   `json:"rights"`
+	Source      string   `json:"source"`
+	Type        string   `json:"type"`
+	Description string   `json:"description"`
+	Latitude    string   `json:"latitude"`
+	Longitude   string   `json:"longitude"`
+	Altitude    string   `json:"altitude"`
+	Rating      byte     `json:"rating"`
+	Comments    string   `json:"comments"`
+	Pages       string   `json:"pages"`
 }

@@ -4,6 +4,7 @@ import (
 	"github.com/analogj/lodestone-processor/pkg/model"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
 )
 
 func TestDocumentProcessor_Process(t *testing.T) {
@@ -99,7 +100,9 @@ func TestDocumentProcessor_Process(t *testing.T) {
 		},
 		Meta: model.DocMeta{
 			Author:      "SE:W:CAR:MP",
-			Date:        "",
+			Date:        time.Time{},
+			CreatedDate: time.Date(2018, time.October, 24, 18, 27, 15, 0, time.UTC), //"2018-10-24T18:27:15Z"),
+			SavedDate:   time.Date(2018, time.October, 24, 18, 27, 15, 0, time.UTC),
 			Keywords:    []string{"Fillable"},
 			Title:       "2018 Form 4868",
 			Language:    "en",
@@ -119,6 +122,7 @@ func TestDocumentProcessor_Process(t *testing.T) {
 			Altitude:    "",
 			Rating:      0x0,
 			Comments:    "",
+			Pages:       "4",
 		},
 	}, docModel)
 	//require.Implements(t, (*Interface)(nil), config, "should implement the config interface")
