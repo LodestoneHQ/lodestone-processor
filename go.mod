@@ -16,15 +16,15 @@ require (
 	github.com/mattn/go-colorable v0.0.9 // indirect
 	github.com/mattn/go-isatty v0.0.10 // indirect
 	github.com/minio/minio-go/v6 v6.0.41
-	github.com/rogpeppe/go-internal v1.5.0 // indirect
+	github.com/rogpeppe/go-internal v1.5.2 // indirect
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/streadway/amqp v0.0.0-20190827072141-edfb9018d271
 	github.com/stretchr/testify v1.4.0
 	github.com/urfave/cli v1.19.1
-	golang.org/x/crypto v0.0.0-20191206172530-e9b2fee46413 // indirect
+	golang.org/x/crypto v0.0.0-20200117160349-530e935923ad // indirect
 	golang.org/x/net v0.0.0-20191116160921-f9c825593386 // indirect
-	golang.org/x/sys v0.0.0-20191210023423-ac6580df4449 // indirect
+	golang.org/x/sys v0.0.0-20200124204421-9fbb57f87de9 // indirect
 	golang.org/x/text v0.3.2 // indirect
 	gopkg.in/gographics/imagick.v2 v2.5.0
 	gopkg.in/ini.v1 v1.51.0 // indirect

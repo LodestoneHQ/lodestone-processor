@@ -111,21 +111,35 @@ func (dp *DocumentProcessor) Process(body []byte) error {
 		return err
 	}
 
-	filePath, err := processor.RetrieveDocument(dp.storageEndpoint, docBucketName, docBucketPath, dir)
-	if err != nil {
-		return err
-	}
+	if event.Records[0].EventName == "s3:ObjectRemoved:Delete" {
+		log.Debugln("Attempting to delete file")
 
-	//pass document to TIKA
-	doc, err := dp.parseDocument(docBucketName, docBucketPath, filePath)
-	if err != nil {
-		return err
-	}
+		//delete document in Elasticsearch
+		err = dp.deleteDocument(docBucketName, docBucketPath)
+		if err != nil {
+			return err
+		}
 
-	//store document in Elasticsearch
-	err = dp.storeDocument(doc)
-	if err != nil {
-		return err
+		//delete thumbnail
+		return nil
+	} else {
+
+		filePath, err := processor.RetrieveDocument(dp.storageEndpoint, docBucketName, docBucketPath, dir)
+		if err != nil {
+			return err
+		}
+
+		//pass document to TIKA
+		doc, err := dp.parseDocument(docBucketName, docBucketPath, filePath)
+		if err != nil {
+			return err
+		}
+
+		//store document in Elasticsearch
+		err = dp.storeDocument(doc)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -258,6 +272,30 @@ func (dp *DocumentProcessor) storeDocument(document model.Document) error {
 		log.Printf("An error occurred while storing document: %v", err)
 	}
 
+	return err
+}
+
+//deletee document in elasticsearch
+func (dp *DocumentProcessor) deleteDocument(docBucketName string, docBucketPath string) error {
+	// use https://github.com/elastic/go-elasticsearch
+
+	log.Println("Attempting to delete document by query in elasticsearch")
+	esResp, err := dp.elasticsearchClient.DeleteByQuery([]string{dp.elasticsearchIndex}, strings.NewReader(
+		fmt.Sprintf(`
+			{
+				"query": {
+					"bool": {
+						"must": [
+							{ "match": { "storage.bucket": "%v" }},
+							{ "match": { "storage.path": "%v"}}
+						]
+					}
+				}
+			}`, docBucketName, docBucketPath)))
+	log.Debugf("DEBUG: ES response: %v", esResp)
+	if err != nil {
+		log.Printf("An error occurred while deleting document: %v", err)
+	}
 	return err
 }
 
