@@ -145,9 +145,10 @@ func (n *AmqpListen) Subscribe(processor func(body []byte) error) error {
 		}
 	}()
 
-	log.Printf(" Waiting for logs. To exit press CTRL+C")
+	log.Printf("Waiting for logs. To exit press CTRL+C")
 	<-forever
 
+	log.Printf("ERROR: Should never get here. %s", err)
 	return nil
 }
 

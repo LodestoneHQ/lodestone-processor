@@ -51,6 +51,22 @@
       "content": {
         "type": "text"
       },
+      "storage": {
+        "properties": {
+          "bucket": {
+            "type": "keyword"
+          },
+          "path":{
+            "type": "keyword"
+          },
+          "thumb_bucket": {
+            "type": "keyword"
+          },
+          "thumb_path": {
+            "type": "keyword"
+          }
+        }
+      },
       "lodestone": {
         "properties": {
           "processor_version": {
