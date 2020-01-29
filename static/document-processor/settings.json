@@ -76,7 +76,9 @@
             "type": "text"
           },
           "tags": {
-            "type": "keyword"
+            "type": "keyword",
+            "store": true,
+            "null_value": "untagged"
           },
           "bookmark": {
             "type": "boolean",
