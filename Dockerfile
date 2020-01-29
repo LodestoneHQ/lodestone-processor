@@ -16,3 +16,4 @@ CMD /go/src/github.com/analogj/lodestone-processor/build.sh
 #COPY --from=builder /go/src/github.com/analogj/lodestone-processor/lodestone-thumbnail-processor-linux-amd64 /usr/bin/lodestone-thumbnail-processor
 #
 #RUN chmod +x /usr/bin/lodestone-document-processor /usr/bin/lodestone-thumbnail-processor
+
