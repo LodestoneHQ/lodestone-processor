@@ -73,7 +73,7 @@ func main() {
 					defer listenClient.Close()
 
 					documentProcessor, err := document.CreateDocumentProcessor(
-						c.String("storage-endpoint"),
+						c.String("api-endpoint"),
 						c.String("storage-thumbnail-bucket"),
 						c.String("tika-endpoint"),
 						c.String("elasticsearch-endpoint"),
@@ -90,9 +90,9 @@ func main() {
 
 				Flags: []cli.Flag{
 					&cli.StringFlag{
-						Name:  "storage-endpoint",
-						Usage: "The storage server endpoint",
-						Value: "http://storage:9000",
+						Name:  "api-endpoint",
+						Usage: "The api server endpoint",
+						Value: "http://webapp:3000",
 					},
 					&cli.StringFlag{
 						Name:  "storage-thumbnail-bucket",
