@@ -43,10 +43,10 @@ type DocFile struct {
 }
 
 type DocStorage struct {
-	Bucket      string `json:"bucket"`
-	Path        string `json:"path"`
-	ThumbBucket string `json:"thumb_bucket"`
-	ThumbPath   string `json:"thumb_path"`
+	Bucket      string `json:"bucket"`       //bucket name, does not include "/" char
+	Path        string `json:"path"`         //key, does not include "/" prefix
+	ThumbBucket string `json:"thumb_bucket"` //bucket name, does not include "/" char
+	ThumbPath   string `json:"thumb_path"`   //key, does not include "/" prefix
 }
 
 type DocMeta struct {

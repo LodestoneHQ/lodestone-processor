@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/analogj/lodestone-processor/pkg/model"
-	"github.com/analogj/lodestone-processor/pkg/processor"
+	"github.com/analogj/lodestone-processor/pkg/processor/api"
 	"github.com/analogj/lodestone-processor/pkg/version"
 	"github.com/elastic/go-elasticsearch/v7"
 	"github.com/gobuffalo/packr"
@@ -29,7 +29,7 @@ import (
 import "github.com/google/go-tika/tika"
 
 type DocumentProcessor struct {
-	storageEndpoint              *url.URL
+	apiEndpoint                  *url.URL
 	storageThumbnailBucket       string
 	tikaEndpoint                 *url.URL
 	elasticsearchEndpoint        *url.URL
@@ -39,9 +39,9 @@ type DocumentProcessor struct {
 	mappings                     *packr.Box
 }
 
-func CreateDocumentProcessor(storageEndpoint string, storageThumbnailBucket string, tikaEndpoint string, elasticsearchEndpoint string, elasticsearchIndex string, elasticsearchMapping string) (DocumentProcessor, error) {
+func CreateDocumentProcessor(apiEndpoint string, storageThumbnailBucket string, tikaEndpoint string, elasticsearchEndpoint string, elasticsearchIndex string, elasticsearchMapping string) (DocumentProcessor, error) {
 
-	storageEndpointUrl, err := url.Parse(storageEndpoint)
+	apiEndpointUrl, err := url.Parse(apiEndpoint)
 	if err != nil {
 		return DocumentProcessor{}, err
 	}
@@ -59,7 +59,7 @@ func CreateDocumentProcessor(storageEndpoint string, storageThumbnailBucket stri
 	box := packr.NewBox("../../../static/document-processor")
 
 	dp := DocumentProcessor{
-		storageEndpoint:              storageEndpointUrl,
+		apiEndpoint:                  apiEndpointUrl,
 		storageThumbnailBucket:       storageThumbnailBucket,
 		tikaEndpoint:                 tikaEndpointUrl,
 		elasticsearchEndpoint:        elasticsearchEndpointUrl,
@@ -106,7 +106,7 @@ func (dp *DocumentProcessor) Process(body []byte) error {
 		return err
 	}
 
-	docBucketName, docBucketPath, err := processor.GenerateStoragePath(event)
+	docBucketName, docBucketPath, err := api.GenerateStoragePath(event)
 	if err != nil {
 		return err
 	}
@@ -124,7 +124,7 @@ func (dp *DocumentProcessor) Process(body []byte) error {
 		return nil
 	} else {
 
-		filePath, err := processor.RetrieveDocument(dp.storageEndpoint, docBucketName, docBucketPath, dir)
+		filePath, err := api.GetFile(dp.apiEndpoint, docBucketName, docBucketPath, dir)
 		if err != nil {
 			return err
 		}
@@ -246,7 +246,7 @@ func (dp *DocumentProcessor) parseDocument(bucketName string, bucketPath string,
 			Path:        bucketPath,
 			Bucket:      bucketName,
 			ThumbBucket: dp.storageThumbnailBucket,
-			ThumbPath:   processor.GenerateThumbnailStoragePath(bucketPath),
+			ThumbPath:   api.GenerateThumbnailStoragePath(bucketPath),
 		},
 	}
 

@@ -2,19 +2,7 @@
   "settings": {
     "number_of_shards": 1,
     "index.mapping.total_fields.limit": 2000,
-    "index.number_of_replicas": 0,
-    "analysis": {
-      "analyzer": {
-        "fscrawler_path": {
-          "tokenizer": "fscrawler_path"
-        }
-      },
-      "tokenizer": {
-        "fscrawler_path": {
-          "type": "path_hierarchy"
-        }
-      }
-    }
+    "index.number_of_replicas": 0
   },
   "mappings": {
     "dynamic_templates": [
@@ -34,20 +22,6 @@
       }
     ],
     "properties": {
-      "attachment": {
-        "type": "binary",
-        "doc_values": false
-      },
-      "attributes": {
-        "properties": {
-          "group": {
-            "type": "keyword"
-          },
-          "owner": {
-            "type": "keyword"
-          }
-        }
-      },
       "content": {
         "type": "text"
       },
@@ -210,39 +184,6 @@
           },
           "comments": {
             "type": "text"
-          }
-        }
-      },
-      "path": {
-        "properties": {
-          "real": {
-            "type": "keyword",
-            "fields": {
-              "tree": {
-                "type": "text",
-                "analyzer": "fscrawler_path",
-                "fielddata": true
-              },
-              "fulltext": {
-                "type": "text"
-              }
-            }
-          },
-          "root": {
-            "type": "keyword"
-          },
-          "virtual": {
-            "type": "keyword",
-            "fields": {
-              "tree": {
-                "type": "text",
-                "analyzer": "fscrawler_path",
-                "fielddata": true
-              },
-              "fulltext": {
-                "type": "text"
-              }
-            }
           }
         }
       }

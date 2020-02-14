@@ -4,8 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/analogj/lodestone-processor/pkg/model"
-	"github.com/analogj/lodestone-processor/pkg/processor"
-	"github.com/minio/minio-go/v6"
+	"github.com/analogj/lodestone-processor/pkg/processor/api"
 	"gopkg.in/gographics/imagick.v2/imagick"
 	"io/ioutil"
 	"math"
@@ -15,18 +14,18 @@ import (
 )
 
 type ThumbnailProcessor struct {
-	storageEndpoint *url.URL
+	apiEndpoint *url.URL
 }
 
-func CreateThumbnailProcessor(storageEndpoint string) (ThumbnailProcessor, error) {
+func CreateThumbnailProcessor(apiEndpoint string) (ThumbnailProcessor, error) {
 
-	storageEndpointUrl, err := url.Parse(storageEndpoint)
+	apiEndpointUrl, err := url.Parse(apiEndpoint)
 	if err != nil {
 		return ThumbnailProcessor{}, err
 	}
 
 	tp := ThumbnailProcessor{
-		storageEndpoint: storageEndpointUrl,
+		apiEndpoint: apiEndpointUrl,
 	}
 
 	return tp, nil
@@ -46,12 +45,12 @@ func (tp *ThumbnailProcessor) Process(body []byte) error {
 		return err
 	}
 
-	docBucketName, docBucketPath, err := processor.GenerateStoragePath(event)
+	docBucketName, docBucketPath, err := api.GenerateStoragePath(event)
 	if err != nil {
 		return err
 	}
 
-	filePath, err := processor.RetrieveDocument(tp.storageEndpoint, docBucketName, docBucketPath, dir)
+	filePath, err := api.GetFile(tp.apiEndpoint, docBucketName, docBucketPath, dir)
 	if err != nil {
 		return err
 	}
@@ -61,7 +60,9 @@ func (tp *ThumbnailProcessor) Process(body []byte) error {
 		return err
 	}
 
-	err = uploadThumbnail(tp.storageEndpoint, "thumbnails", docBucketPath, thumbFilePath)
+	//convert extension to jpg before uploading
+	thumbStoragePath := api.GenerateThumbnailStoragePath(docBucketPath)
+	err = api.UploadFile(tp.apiEndpoint, "thumbnails", thumbStoragePath, thumbFilePath)
 
 	return err
 
@@ -139,25 +140,4 @@ func generateThumbnail(docFilePath string, outputDirectory string) (string, erro
 	err = mw.WriteImage(outputFilePath)
 
 	return outputFilePath, err
-}
-
-func uploadThumbnail(storageEndpoint *url.URL, storageBucket string, storagePath string, thumbFilePath string) error {
-
-	//convert extension to jpg before uploading
-	thumbStoragePath := processor.GenerateThumbnailStoragePath(storagePath)
-
-	secureProtocol := storageEndpoint.Scheme == "https"
-
-	s3Client, err := minio.New(storageEndpoint.Host, os.Getenv("MINIO_ACCESS_KEY"), os.Getenv("MINIO_SECRET_KEY"), secureProtocol)
-	if err != nil {
-		return err
-	}
-
-	if _, err := s3Client.FPutObject(storageBucket, thumbStoragePath, thumbFilePath, minio.PutObjectOptions{
-		ContentType: "image/jpeg",
-	}); err != nil {
-		return err
-	}
-
-	return nil
 }

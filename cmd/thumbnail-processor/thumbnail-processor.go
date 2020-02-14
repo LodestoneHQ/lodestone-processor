@@ -71,7 +71,7 @@ func main() {
 					}
 					defer listenClient.Close()
 
-					thumbnailProcessor, err := thumbnail.CreateThumbnailProcessor(c.String("storage-endpoint"))
+					thumbnailProcessor, err := thumbnail.CreateThumbnailProcessor(c.String("api-endpoint"))
 					if err != nil {
 						return err
 					}
@@ -81,9 +81,9 @@ func main() {
 				Flags: []cli.Flag{
 
 					&cli.StringFlag{
-						Name:  "storage-endpoint",
-						Usage: "The storage server endpoint",
-						Value: "http://storage:9000",
+						Name:  "api-endpoint",
+						Usage: "The api server endpoint",
+						Value: "http://webapp:3000",
 					},
 
 					&cli.StringFlag{
