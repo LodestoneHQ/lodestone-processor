@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/analogj/lodestone-processor/pkg/model"
 	"github.com/analogj/lodestone-processor/pkg/processor/api"
+	log "github.com/sirupsen/logrus"
 	"gopkg.in/gographics/imagick.v2/imagick"
 	"io/ioutil"
 	"math"
@@ -15,6 +16,7 @@ import (
 
 type ThumbnailProcessor struct {
 	apiEndpoint *url.URL
+	filter      *model.Filter
 }
 
 func CreateThumbnailProcessor(apiEndpoint string) (ThumbnailProcessor, error) {
@@ -24,23 +26,24 @@ func CreateThumbnailProcessor(apiEndpoint string) (ThumbnailProcessor, error) {
 		return ThumbnailProcessor{}, err
 	}
 
+	//retrieve the filters (include/excludes) from the API
+	filterData, err := api.GetIncludeExcludeData(apiEndpointUrl)
+	if err != nil {
+		return ThumbnailProcessor{}, err
+	}
+
 	tp := ThumbnailProcessor{
 		apiEndpoint: apiEndpointUrl,
+		filter:      &filterData,
 	}
 
 	return tp, nil
 }
 
 func (tp *ThumbnailProcessor) Process(body []byte) error {
-	//make a temporary directory for subsequent processing (original file download, and thumb generation)
-	dir, err := ioutil.TempDir("", "thumb")
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(dir) // clean up
 
 	var event model.S3Event
-	err = json.Unmarshal(body, &event)
+	err := json.Unmarshal(body, &event)
 	if err != nil {
 		return err
 	}
@@ -49,6 +52,19 @@ func (tp *ThumbnailProcessor) Process(body []byte) error {
 	if err != nil {
 		return err
 	}
+
+	//determine if we should even be processing this document
+	includeDocument := tp.filter.ValidPath(docBucketPath)
+	if !includeDocument {
+		log.Infof("Ignoring document, matches exclude pattern (%s, %s)", docBucketName, docBucketPath)
+	}
+
+	//make a temporary directory for subsequent processing (original file download, and thumb generation)
+	dir, err := ioutil.TempDir("", "thumb")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(dir) // clean up
 
 	filePath, err := api.GetFile(tp.apiEndpoint, docBucketName, docBucketPath, dir)
 	if err != nil {

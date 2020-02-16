@@ -37,11 +37,18 @@ type DocumentProcessor struct {
 	elasticsearchMappingOverride string
 	elasticsearchClient          *elasticsearch.Client
 	mappings                     *packr.Box
+	filter                       *model.Filter
 }
 
 func CreateDocumentProcessor(apiEndpoint string, storageThumbnailBucket string, tikaEndpoint string, elasticsearchEndpoint string, elasticsearchIndex string, elasticsearchMapping string) (DocumentProcessor, error) {
 
 	apiEndpointUrl, err := url.Parse(apiEndpoint)
+	if err != nil {
+		return DocumentProcessor{}, err
+	}
+
+	//retrieve the filters (include/excludes) from the API
+	filterData, err := api.GetIncludeExcludeData(apiEndpointUrl)
 	if err != nil {
 		return DocumentProcessor{}, err
 	}
@@ -66,6 +73,7 @@ func CreateDocumentProcessor(apiEndpoint string, storageThumbnailBucket string, 
 		elasticsearchIndex:           elasticsearchIndex,
 		elasticsearchMappingOverride: elasticsearchMapping,
 		mappings:                     &box,
+		filter:                       &filterData,
 	}
 
 	//ensure the elastic search index exists (do this once on startup)
@@ -93,15 +101,8 @@ func CreateDocumentProcessor(apiEndpoint string, storageThumbnailBucket string, 
 
 func (dp *DocumentProcessor) Process(body []byte) error {
 
-	//make a temporary directory for subsequent processing (original file download, and thumb generation)
-	dir, err := ioutil.TempDir("", "doc")
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(dir) // clean up
-
 	var event model.S3Event
-	err = json.Unmarshal(body, &event)
+	err := json.Unmarshal(body, &event)
 	if err != nil {
 		return err
 	}
@@ -110,6 +111,19 @@ func (dp *DocumentProcessor) Process(body []byte) error {
 	if err != nil {
 		return err
 	}
+
+	//determine if we should even be processing this document
+	includeDocument := dp.filter.ValidPath(docBucketPath)
+	if !includeDocument {
+		log.Infof("Ignoring document, matches exclude pattern (%s, %s)", docBucketName, docBucketPath)
+	}
+
+	//make a temporary directory for subsequent processing (original file download, and thumb generation)
+	dir, err := ioutil.TempDir("", "doc")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(dir) // clean up
 
 	if event.Records[0].EventName == "s3:ObjectRemoved:Delete" {
 		log.Debugln("Attempting to delete file")

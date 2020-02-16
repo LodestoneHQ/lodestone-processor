@@ -17,6 +17,7 @@ require (
 	github.com/mattn/go-colorable v0.0.9 // indirect
 	github.com/mattn/go-isatty v0.0.10 // indirect
 	github.com/rogpeppe/go-internal v1.5.2 // indirect
+	github.com/sabhiram/go-gitignore v0.0.0-20180611051255-d3107576ba94
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/streadway/amqp v0.0.0-20190827072141-edfb9018d271
