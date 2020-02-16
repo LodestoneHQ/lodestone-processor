@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/analogj/lodestone-processor/pkg/model"
+	"github.com/analogj/lodestone-processor/pkg/processor"
 	"github.com/analogj/lodestone-processor/pkg/processor/api"
 	"github.com/analogj/lodestone-processor/pkg/version"
 	"github.com/elastic/go-elasticsearch/v7"
@@ -29,6 +30,8 @@ import (
 import "github.com/google/go-tika/tika"
 
 type DocumentProcessor struct {
+	processor.CommonProcessor
+
 	apiEndpoint                  *url.URL
 	storageThumbnailBucket       string
 	tikaEndpoint                 *url.URL
@@ -116,6 +119,7 @@ func (dp *DocumentProcessor) Process(body []byte) error {
 	includeDocument := dp.filter.ValidPath(docBucketPath)
 	if !includeDocument {
 		log.Infof("Ignoring document, matches exclude pattern (%s, %s)", docBucketName, docBucketPath)
+		return nil
 	}
 
 	//make a temporary directory for subsequent processing (original file download, and thumb generation)
@@ -133,14 +137,16 @@ func (dp *DocumentProcessor) Process(body []byte) error {
 		if err != nil {
 			return err
 		}
-
-		//delete thumbnail
 		return nil
 	} else {
 
-		filePath, err := api.GetFile(dp.apiEndpoint, docBucketName, docBucketPath, dir)
+		filePath, err := api.ReadFile(dp.apiEndpoint, docBucketName, docBucketPath, dir)
 		if err != nil {
 			return err
+		}
+		if dp.IsEmptyFile(filePath) {
+			log.Infof("Ignoring document, filesize is 0 (%s, %s)", docBucketName, docBucketPath)
+			return nil
 		}
 
 		//pass document to TIKA

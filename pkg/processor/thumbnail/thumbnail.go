@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/analogj/lodestone-processor/pkg/model"
+	"github.com/analogj/lodestone-processor/pkg/processor"
 	"github.com/analogj/lodestone-processor/pkg/processor/api"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/gographics/imagick.v2/imagick"
@@ -15,6 +16,8 @@ import (
 )
 
 type ThumbnailProcessor struct {
+	processor.CommonProcessor
+
 	apiEndpoint *url.URL
 	filter      *model.Filter
 }
@@ -57,6 +60,7 @@ func (tp *ThumbnailProcessor) Process(body []byte) error {
 	includeDocument := tp.filter.ValidPath(docBucketPath)
 	if !includeDocument {
 		log.Infof("Ignoring document, matches exclude pattern (%s, %s)", docBucketName, docBucketPath)
+		return nil
 	}
 
 	//make a temporary directory for subsequent processing (original file download, and thumb generation)
@@ -66,22 +70,37 @@ func (tp *ThumbnailProcessor) Process(body []byte) error {
 	}
 	defer os.RemoveAll(dir) // clean up
 
-	filePath, err := api.GetFile(tp.apiEndpoint, docBucketName, docBucketPath, dir)
-	if err != nil {
+	if event.Records[0].EventName == "s3:ObjectRemoved:Delete" {
+		log.Debugln("Attempting to delete thumbnail file")
+
+		thumbStoragePath := api.GenerateThumbnailStoragePath(docBucketPath)
+		err = api.DeleteFile(tp.apiEndpoint, "thumbnails", thumbStoragePath)
+		if err != nil {
+			return err
+		}
+		return nil
+
+	} else {
+		filePath, err := api.ReadFile(tp.apiEndpoint, docBucketName, docBucketPath, dir)
+		if err != nil {
+			return err
+		}
+		if tp.IsEmptyFile(filePath) {
+			log.Infof("Ignoring document, filesize is 0 (%s, %s)", docBucketName, docBucketPath)
+			return nil
+		}
+
+		thumbFilePath, err := generateThumbnail(filePath, dir)
+		if err != nil {
+			return err
+		}
+
+		//convert extension to jpg before uploading
+		thumbStoragePath := api.GenerateThumbnailStoragePath(docBucketPath)
+		err = api.CreateFile(tp.apiEndpoint, "thumbnails", thumbStoragePath, thumbFilePath)
+
 		return err
 	}
-
-	thumbFilePath, err := generateThumbnail(filePath, dir)
-	if err != nil {
-		return err
-	}
-
-	//convert extension to jpg before uploading
-	thumbStoragePath := api.GenerateThumbnailStoragePath(docBucketPath)
-	err = api.UploadFile(tp.apiEndpoint, "thumbnails", thumbStoragePath, thumbFilePath)
-
-	return err
-
 }
 
 func generateThumbnail(docFilePath string, outputDirectory string) (string, error) {
