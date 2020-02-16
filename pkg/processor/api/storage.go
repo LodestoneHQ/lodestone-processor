@@ -59,7 +59,28 @@ func GenerateThumbnailStoragePath(storagePath string) string {
 	return storagePath
 }
 
-func GetFile(apiEndpoint *url.URL, storageBucket string, storagePath string, outputDirectory string) (string, error) {
+//File CRUD Operations
+func CreateFile(apiEndpoint *url.URL, storageBucket string, storagePath string, localFilepath string) error {
+
+	localFile, err := os.Open(localFilepath)
+	if err != nil {
+		return err
+	}
+	defer localFile.Close()
+
+	//manipulate the path
+	apiEndpoint.Path = fmt.Sprintf("/api/v1/storage/%s/%s", storageBucket, storagePath)
+
+	resp, err := http.Post(apiEndpoint.String(), "binary/octet-stream", localFile)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	return nil
+}
+
+func ReadFile(apiEndpoint *url.URL, storageBucket string, storagePath string, outputDirectory string) (string, error) {
 
 	//secureProtocol := apiEndpoint.Scheme == "https"
 	//
@@ -94,22 +115,11 @@ func GetFile(apiEndpoint *url.URL, storageBucket string, storagePath string, out
 	return localFilepath, err
 }
 
-func UploadFile(apiEndpoint *url.URL, storageBucket string, storagePath string, localFilepath string) error {
-
-	localFile, err := os.Open(localFilepath)
-	if err != nil {
-		return err
-	}
-	defer localFile.Close()
+func DeleteFile(apiEndpoint *url.URL, storageBucket string, storagePath string) error {
 
 	//manipulate the path
 	apiEndpoint.Path = fmt.Sprintf("/api/v1/storage/%s/%s", storageBucket, storagePath)
 
-	resp, err := http.Post(apiEndpoint.String(), "binary/octet-stream", localFile)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	return nil
+	_, err := http.NewRequest(http.MethodDelete, apiEndpoint.String(), nil)
+	return err
 }
