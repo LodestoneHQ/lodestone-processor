@@ -93,7 +93,7 @@ func TestFilter_FromJson(t *testing.T) {
 	assert.True(t, filter.ValidPath("subdirectory/hello.png"))
 	assert.True(t, filter.ValidPath("subdirectory/hello.jpeg"))
 	assert.True(t, filter.ValidPath("subdirectory/hello.gif"))
-	assert.True(t, filter.ValidPath("subdirectory/embedded.msi/inpath"))
+	assert.True(t, filter.ValidPath("subdirectory/embedded.msiinside/inpath"))
 
 	assert.False(t, filter.ValidPath(".DS_Store"))
 	assert.False(t, filter.ValidPath("subdirectory/.DS_Store"))
