@@ -168,7 +168,7 @@ func (dp *DocumentProcessor) Process(body []byte) error {
 }
 func (dp *DocumentProcessor) tikaHttpClient() *http.Client {
 	client := &http.Client{
-		Timeout:   time.Second * 10,
+		Timeout:   time.Minute * 5, //5 minutes max to process documents.
 		Transport: TikaRoundTripper{r: http.DefaultTransport},
 	}
 
