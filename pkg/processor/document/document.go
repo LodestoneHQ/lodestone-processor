@@ -14,7 +14,7 @@ import (
 	"github.com/analogj/lodestone-processor/pkg/version"
 	"github.com/elastic/go-elasticsearch/v7"
 	"github.com/gobuffalo/packr"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -41,9 +41,10 @@ type DocumentProcessor struct {
 	elasticsearchClient          *elasticsearch.Client
 	mappings                     *packr.Box
 	filter                       *model.Filter
+	logger                       *logrus.Entry
 }
 
-func CreateDocumentProcessor(apiEndpoint string, storageThumbnailBucket string, tikaEndpoint string, elasticsearchEndpoint string, elasticsearchIndex string, elasticsearchMapping string) (DocumentProcessor, error) {
+func CreateDocumentProcessor(logger *logrus.Entry, apiEndpoint string, storageThumbnailBucket string, tikaEndpoint string, elasticsearchEndpoint string, elasticsearchIndex string, elasticsearchMapping string) (DocumentProcessor, error) {
 
 	apiEndpointUrl, err := url.Parse(apiEndpoint)
 	if err != nil {
@@ -77,6 +78,7 @@ func CreateDocumentProcessor(apiEndpoint string, storageThumbnailBucket string, 
 		elasticsearchMappingOverride: elasticsearchMapping,
 		mappings:                     &box,
 		filter:                       &filterData,
+		logger:                       logger,
 	}
 
 	//ensure the elastic search index exists (do this once on startup)
@@ -90,9 +92,9 @@ func CreateDocumentProcessor(apiEndpoint string, storageThumbnailBucket string, 
 	}
 	dp.elasticsearchClient = es
 
-	log.Debugln("Connect to ElasticSearch & ensure indicies exist")
-	log.Debugln(elasticsearch.Version)
-	log.Debugln(es.Info())
+	dp.logger.Debugln("Connect to ElasticSearch & ensure indicies exist")
+	dp.logger.Debugln(elasticsearch.Version)
+	dp.logger.Debugln(es.Info())
 
 	err = dp.ensureIndicies()
 	if err != nil {
@@ -118,7 +120,7 @@ func (dp *DocumentProcessor) Process(body []byte) error {
 	//determine if we should even be processing this document
 	includeDocument := dp.filter.ValidPath(docBucketPath)
 	if !includeDocument {
-		log.Infof("Ignoring document, matches exclude pattern (%s, %s)", docBucketName, docBucketPath)
+		dp.logger.Infof("Ignoring document, matches exclude pattern (%s, %s)", docBucketName, docBucketPath)
 		return nil
 	}
 
@@ -130,7 +132,7 @@ func (dp *DocumentProcessor) Process(body []byte) error {
 	defer os.RemoveAll(dir) // clean up
 
 	if event.Records[0].EventName == "s3:ObjectRemoved:Delete" {
-		log.Debugln("Attempting to delete file")
+		dp.logger.Debugln("Attempting to delete file")
 
 		//delete document in Elasticsearch
 		err = dp.deleteDocument(docBucketName, docBucketPath)
@@ -145,7 +147,7 @@ func (dp *DocumentProcessor) Process(body []byte) error {
 			return err
 		}
 		if dp.IsEmptyFile(filePath) {
-			log.Infof("Ignoring document, filesize is 0 (%s, %s)", docBucketName, docBucketPath)
+			dp.logger.Infof("Ignoring document, filesize is 0 (%s, %s)", docBucketName, docBucketPath)
 			return nil
 		}
 
@@ -188,7 +190,7 @@ func (dp *DocumentProcessor) parseDocument(bucketName string, bucketPath string,
 	}
 	//trim whitespace/newline characters
 	docContent = strings.TrimSpace(docContent)
-	log.Debugf("docContent: %s", docContent)
+	dp.logger.Debugf("docContent: %s", docContent)
 
 	metaFile, err := os.Open(localFilePath)
 	if err != nil {
@@ -200,7 +202,7 @@ func (dp *DocumentProcessor) parseDocument(bucketName string, bucketPath string,
 	if err != nil {
 		return model.Document{}, err
 	}
-	log.Debugf("metaJson: %s", metaJson)
+	dp.logger.Debugf("metaJson: %s", metaJson)
 
 	fileStat, err := os.Stat(localFilePath)
 	if err != nil {
@@ -283,15 +285,15 @@ func (dp *DocumentProcessor) storeDocument(document model.Document) error {
 
 	payload, err := json.Marshal(document)
 	if err != nil {
-		log.Printf("An error occurred while json encoding Document: %v", err)
+		dp.logger.Printf("An error occurred while json encoding Document: %v", err)
 		return err
 	}
 
-	log.Println("Attempting to store new document in elasticsearch")
+	dp.logger.Println("Attempting to store new document in elasticsearch")
 	esResp, err := dp.elasticsearchClient.Index(dp.elasticsearchIndex, bytes.NewReader(payload), dp.elasticsearchClient.Index.WithDocumentID(document.ID))
-	log.Debugf("DEBUG: ES response: %v", esResp)
+	dp.logger.Debugf("DEBUG: ES response: %v", esResp)
 	if err != nil {
-		log.Printf("An error occurred while storing document: %v", err)
+		dp.logger.Printf("An error occurred while storing document: %v", err)
 	}
 
 	return err
@@ -301,7 +303,7 @@ func (dp *DocumentProcessor) storeDocument(document model.Document) error {
 func (dp *DocumentProcessor) deleteDocument(docBucketName string, docBucketPath string) error {
 	// use https://github.com/elastic/go-elasticsearch
 
-	log.Println("Attempting to delete document by query in elasticsearch")
+	dp.logger.Println("Attempting to delete document by query in elasticsearch")
 	esResp, err := dp.elasticsearchClient.DeleteByQuery([]string{dp.elasticsearchIndex}, strings.NewReader(
 		fmt.Sprintf(`
 			{
@@ -314,9 +316,9 @@ func (dp *DocumentProcessor) deleteDocument(docBucketName string, docBucketPath 
 					}
 				}
 			}`, docBucketName, docBucketPath)))
-	log.Debugf("DEBUG: ES response: %v", esResp)
+	dp.logger.Debugf("DEBUG: ES response: %v", esResp)
 	if err != nil {
-		log.Printf("An error occurred while deleting document: %v", err)
+		dp.logger.Printf("An error occurred while deleting document: %v", err)
 	}
 	return err
 }
@@ -324,12 +326,12 @@ func (dp *DocumentProcessor) deleteDocument(docBucketName string, docBucketPath 
 func (dp *DocumentProcessor) ensureIndicies() error {
 	//we cant be sure that the elasticsearch index (& mappings) already exist, so we have to check if they exist on every document insertion.
 
-	log.Printf("Attempting to create %s index, if it does not exist", dp.elasticsearchIndex)
+	dp.logger.Printf("Attempting to create %s index, if it does not exist", dp.elasticsearchIndex)
 	resp, err := dp.elasticsearchClient.Indices.Exists([]string{dp.elasticsearchIndex})
-	log.Debugf("%v \n %v", resp, err)
+	dp.logger.Debugf("%v \n %v", resp, err)
 	if err == nil && resp.StatusCode == 200 {
 		//index exists, do nothing
-		log.Println("Index already exists, skipping.")
+		dp.logger.Println("Index already exists, skipping.")
 		return nil
 	}
 
@@ -338,18 +340,18 @@ func (dp *DocumentProcessor) ensureIndicies() error {
 	if len(dp.elasticsearchMappingOverride) > 0 {
 		f, err := os.Open(dp.elasticsearchMappingOverride)
 		if err != nil {
-			log.Printf("COULD NOT OPEN MAPPING OVERRIDE FILE: %v, %v", dp.elasticsearchMappingOverride, err)
+			dp.logger.Printf("COULD NOT OPEN MAPPING OVERRIDE FILE: %v, %v", dp.elasticsearchMappingOverride, err)
 			return err
 		}
 		mappingReader = bufio.NewReader(f)
 	} else {
-		log.Debugf("looking for settings.json in mappings....")
+		dp.logger.Debugf("looking for settings.json in mappings....")
 		mappings, err := dp.mappings.FindString("settings.json")
 		if err != nil {
-			log.Printf("COULD NOT FIND MAPPING FOR settings.json: %v, %v", mappings, err)
+			dp.logger.Printf("COULD NOT FIND MAPPING FOR settings.json: %v, %v", mappings, err)
 			return err
 		}
-		log.Debugf("Found settings.json: %v", mappings)
+		dp.logger.Debugf("Found settings.json: %v", mappings)
 		mappingReader = strings.NewReader(mappings)
 	}
 

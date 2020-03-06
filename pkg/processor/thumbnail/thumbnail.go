@@ -2,11 +2,10 @@ package thumbnail
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/analogj/lodestone-processor/pkg/model"
 	"github.com/analogj/lodestone-processor/pkg/processor"
 	"github.com/analogj/lodestone-processor/pkg/processor/api"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"gopkg.in/gographics/imagick.v2/imagick"
 	"io/ioutil"
 	"math"
@@ -20,9 +19,10 @@ type ThumbnailProcessor struct {
 
 	apiEndpoint *url.URL
 	filter      *model.Filter
+	logger      *logrus.Entry
 }
 
-func CreateThumbnailProcessor(apiEndpoint string) (ThumbnailProcessor, error) {
+func CreateThumbnailProcessor(logger *logrus.Entry, apiEndpoint string) (ThumbnailProcessor, error) {
 
 	apiEndpointUrl, err := url.Parse(apiEndpoint)
 	if err != nil {
@@ -38,6 +38,7 @@ func CreateThumbnailProcessor(apiEndpoint string) (ThumbnailProcessor, error) {
 	tp := ThumbnailProcessor{
 		apiEndpoint: apiEndpointUrl,
 		filter:      &filterData,
+		logger:      logger,
 	}
 
 	return tp, nil
@@ -59,7 +60,7 @@ func (tp *ThumbnailProcessor) Process(body []byte) error {
 	//determine if we should even be processing this document
 	includeDocument := tp.filter.ValidPath(docBucketPath)
 	if !includeDocument {
-		log.Infof("Ignoring document, matches exclude pattern (%s, %s)", docBucketName, docBucketPath)
+		tp.logger.Infof("Ignoring document, matches exclude pattern (%s, %s)", docBucketName, docBucketPath)
 		return nil
 	}
 
@@ -71,7 +72,7 @@ func (tp *ThumbnailProcessor) Process(body []byte) error {
 	defer os.RemoveAll(dir) // clean up
 
 	if event.Records[0].EventName == "s3:ObjectRemoved:Delete" {
-		log.Debugln("Attempting to delete thumbnail file")
+		tp.logger.Debugln("Attempting to delete thumbnail file")
 
 		thumbStoragePath := api.GenerateThumbnailStoragePath(docBucketPath)
 		err = api.DeleteFile(tp.apiEndpoint, "thumbnails", thumbStoragePath)
@@ -86,11 +87,11 @@ func (tp *ThumbnailProcessor) Process(body []byte) error {
 			return err
 		}
 		if tp.IsEmptyFile(filePath) {
-			log.Infof("Ignoring document, filesize is 0 (%s, %s)", docBucketName, docBucketPath)
+			tp.logger.Infof("Ignoring document, filesize is 0 (%s, %s)", docBucketName, docBucketPath)
 			return nil
 		}
 
-		thumbFilePath, err := generateThumbnail(filePath, dir)
+		thumbFilePath, err := tp.generateThumbnail(filePath, dir)
 		if err != nil {
 			return err
 		}
@@ -103,7 +104,7 @@ func (tp *ThumbnailProcessor) Process(body []byte) error {
 	}
 }
 
-func generateThumbnail(docFilePath string, outputDirectory string) (string, error) {
+func (tp *ThumbnailProcessor) generateThumbnail(docFilePath string, outputDirectory string) (string, error) {
 	maxThumbWidth := 500
 	maxThumbHeight := 800
 
@@ -115,14 +116,12 @@ func generateThumbnail(docFilePath string, outputDirectory string) (string, erro
 
 	//code from https://github.com/gographics/imagick/issues/170
 
-	fmt.Println("----> reading the original document...")
+	tp.logger.Infof("reading file: %v", docFilePath)
 
 	// load the file blob as image.
 	dat, err := ioutil.ReadFile(docFilePath)
 
 	err = mw.ReadImageBlob(dat)
-
-	fmt.Println("----> finished reading original document")
 
 	if err != nil {
 		return "", err
@@ -147,8 +146,6 @@ func generateThumbnail(docFilePath string, outputDirectory string) (string, erro
 	if err != nil {
 		return "", err
 	}
-
-	fmt.Println("----> set to jpg...")
 
 	err = mw.SetImageAlphaChannel(imagick.ALPHA_CHANNEL_REMOVE)
 	if err != nil {
