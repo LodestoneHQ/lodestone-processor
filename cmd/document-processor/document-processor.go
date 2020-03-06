@@ -7,7 +7,7 @@ import (
 	"github.com/analogj/lodestone-processor/pkg/processor/document"
 	"github.com/analogj/lodestone-processor/pkg/version"
 	"github.com/fatih/color"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 	"os"
 	"time"
@@ -53,16 +53,20 @@ func main() {
 				Usage: "Start the Lodestone document processor",
 				Action: func(c *cli.Context) error {
 
+					processorLogger := logrus.WithFields(logrus.Fields{
+						"type": "document",
+					})
+
 					if c.Bool("debug") {
-						log.SetLevel(log.DebugLevel)
+						logrus.SetLevel(logrus.DebugLevel)
 					} else {
-						log.SetLevel(log.InfoLevel)
+						logrus.SetLevel(logrus.InfoLevel)
 					}
 
 					var listenClient listen.Interface
 
 					listenClient = new(listen.AmqpListen)
-					err := listenClient.Init(map[string]string{
+					err := listenClient.Init(processorLogger, map[string]string{
 						"amqp-url": c.String("amqp-url"),
 						"exchange": c.String("amqp-exchange"),
 						"queue":    c.String("amqp-queue"),
@@ -73,6 +77,7 @@ func main() {
 					defer listenClient.Close()
 
 					documentProcessor, err := document.CreateDocumentProcessor(
+						processorLogger,
 						c.String("api-endpoint"),
 						c.String("storage-thumbnail-bucket"),
 						c.String("tika-endpoint"),
@@ -149,6 +154,6 @@ func main() {
 
 	err := app.Run(os.Args)
 	if err != nil {
-		log.Fatal(color.HiRedString("ERROR: %v", err))
+		logrus.Fatal(color.HiRedString("document ERROR: %v", err))
 	}
 }

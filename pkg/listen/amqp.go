@@ -1,8 +1,7 @@
 package listen
 
 import (
-	"fmt"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/streadway/amqp"
 )
 
@@ -11,9 +10,12 @@ type AmqpListen struct {
 	channel  *amqp.Channel
 	exchange string
 	queue    string
+
+	logger *logrus.Entry
 }
 
-func (n *AmqpListen) Init(config map[string]string) error {
+func (n *AmqpListen) Init(logger *logrus.Entry, config map[string]string) error {
+	n.logger = logger
 	n.exchange = config["exchange"]
 	n.queue = config["queue"]
 
@@ -100,7 +102,7 @@ func (n *AmqpListen) Init(config map[string]string) error {
 }
 
 func (n *AmqpListen) Subscribe(processor func(body []byte) error) error {
-	fmt.Println("Subscribe to events..")
+	n.logger.Println("Subscribe to events..")
 
 	err := n.channel.QueueBind(
 		n.queue,    // queue name
@@ -129,26 +131,26 @@ func (n *AmqpListen) Subscribe(processor func(body []byte) error) error {
 
 	go func() {
 		for d := range msgs {
-			log.Printf(" [x] %s", d.Body)
+			n.logger.Printf("[x] %s", d.Body)
 			if err := processor(d.Body); err != nil {
-				log.Printf("Error when processing document: %s", err)
+				n.logger.Printf("Error when processing document: %s", err)
 
 				//add to the dead letter queue (for further processing later)
 				if err := d.Reject(false); err != nil {
-					log.Printf("Error while adding document to dead-letter-queue")
+					n.logger.Printf("Error while adding document to dead-letter-queue")
 				}
 			} else {
 				if err := d.Ack(false); err != nil {
-					log.Printf("Error while notifying successful processing")
+					n.logger.Printf("Error while notifying successful processing")
 				}
 			}
 		}
 	}()
 
-	log.Printf("Waiting for logs. To exit press CTRL+C")
+	n.logger.Printf("Waiting for logs. To exit press CTRL+C")
 	<-forever
 
-	log.Printf("ERROR: Should never get here. %s", err)
+	n.logger.Printf("ERROR: Should never get here. %s", err)
 	return nil
 }
 
