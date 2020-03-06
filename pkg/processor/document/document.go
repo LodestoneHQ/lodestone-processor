@@ -189,9 +189,8 @@ func (dp *DocumentProcessor) parseDocument(bucketName string, bucketPath string,
 		return model.Document{}, err
 	}
 	//trim whitespace/newline characters
-	dp.logger.Debugf("docContent: %s", docContent)
-	dp.logger.Debugf("trim Content: %s", strings.TrimSpace(docContent))
-	//docContent = strings.TrimSpace(docContent)
+	docContent = strings.TrimSpace(docContent)
+	dp.logger.Debugf("docContent: '%s'", docContent)
 
 	metaFile, err := os.Open(localFilePath)
 	if err != nil {

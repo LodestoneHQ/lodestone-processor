@@ -13,6 +13,9 @@ func (mrt TikaRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
 	if r.URL.Path == "/meta" {
 		r.Header.Add("Accept", "application/json")
 	}
+	if r.URL.Path == "/tika" {
+		r.Header.Add("Accept", "text/plain")
+	}
 
 	return mrt.r.RoundTrip(r)
 }
