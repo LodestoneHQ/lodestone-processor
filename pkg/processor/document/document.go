@@ -8,13 +8,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/analogj/lodestone-processor/pkg/model"
-	"github.com/analogj/lodestone-processor/pkg/processor"
-	"github.com/analogj/lodestone-processor/pkg/processor/api"
-	"github.com/analogj/lodestone-processor/pkg/version"
-	"github.com/elastic/go-elasticsearch/v7"
-	"github.com/gobuffalo/packr"
-	"github.com/sirupsen/logrus"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -26,8 +19,16 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/analogj/lodestone-processor/pkg/model"
+	"github.com/analogj/lodestone-processor/pkg/processor"
+	"github.com/analogj/lodestone-processor/pkg/processor/api"
+	"github.com/analogj/lodestone-processor/pkg/version"
+	"github.com/elastic/go-elasticsearch/v7"
+	"github.com/google/go-tika/tika"
+	"github.com/markbates/pkger"
+	"github.com/sirupsen/logrus"
 )
-import "github.com/google/go-tika/tika"
 
 type DocumentProcessor struct {
 	processor.CommonProcessor
@@ -39,7 +40,6 @@ type DocumentProcessor struct {
 	elasticsearchIndex           string
 	elasticsearchMappingOverride string
 	elasticsearchClient          *elasticsearch.Client
-	mappings                     *packr.Box
 	filter                       *model.Filter
 	logger                       *logrus.Entry
 }
@@ -67,8 +67,6 @@ func CreateDocumentProcessor(logger *logrus.Entry, apiEndpoint string, storageTh
 		return DocumentProcessor{}, err
 	}
 
-	box := packr.NewBox("../../../static/document-processor")
-
 	dp := DocumentProcessor{
 		apiEndpoint:                  apiEndpointUrl,
 		storageThumbnailBucket:       storageThumbnailBucket,
@@ -76,7 +74,6 @@ func CreateDocumentProcessor(logger *logrus.Entry, apiEndpoint string, storageTh
 		elasticsearchEndpoint:        elasticsearchEndpointUrl,
 		elasticsearchIndex:           elasticsearchIndex,
 		elasticsearchMappingOverride: elasticsearchMapping,
-		mappings:                     &box,
 		filter:                       &filterData,
 		logger:                       logger,
 	}
@@ -336,24 +333,21 @@ func (dp *DocumentProcessor) ensureIndicies() error {
 	}
 
 	//index does not exist, lets create it
-	var mappingReader io.Reader
-	if len(dp.elasticsearchMappingOverride) > 0 {
-		f, err := os.Open(dp.elasticsearchMappingOverride)
-		if err != nil {
-			dp.logger.Printf("COULD NOT OPEN MAPPING OVERRIDE FILE: %v, %v", dp.elasticsearchMappingOverride, err)
-			return err
-		}
-		mappingReader = bufio.NewReader(f)
+	var indexSettingsFile io.ReadCloser
+
+	if dp.elasticsearchMappingOverride == "" {
+		indexSettingsFile, err = pkger.Open("/static/document-processor/settings.json")
 	} else {
-		dp.logger.Debugf("looking for settings.json in mappings....")
-		mappings, err := dp.mappings.FindString("settings.json")
-		if err != nil {
-			dp.logger.Printf("COULD NOT FIND MAPPING FOR settings.json: %v, %v", mappings, err)
-			return err
-		}
-		dp.logger.Debugf("Found settings.json: %v", mappings)
-		mappingReader = strings.NewReader(mappings)
+		indexSettingsFile, err = os.Open(dp.elasticsearchMappingOverride)
 	}
+
+	if err != nil {
+		dp.logger.Printf("COULD NOT OPEN MAPPING OVERRIDE FILE: %v", err)
+		return err
+	}
+
+	defer indexSettingsFile.Close()
+	mappingReader := bufio.NewReader(indexSettingsFile)
 
 	_, err = dp.elasticsearchClient.Indices.Create(dp.elasticsearchIndex, dp.elasticsearchClient.Indices.Create.WithBody(mappingReader))
 	return err

@@ -1,0 +1,20 @@
+FROM golang AS build
+
+RUN go get github.com/markbates/pkger/cmd/pkger
+
+WORKDIR /lodestone-processor
+ADD go.mod ./
+ADD go.sum ./
+
+RUN go mod download
+
+ADD static ./static
+ADD pkg ./pkg
+ADD cmd/document-processor ./cmd/document-processor
+
+RUN pkger -o pkg/processor/document
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o lodestone-document-processor ./cmd/document-processor/document-processor.go
+
+FROM scratch
+COPY --from=build /lodestone-processor/lodestone-document-processor /lodestone-document-processor
+CMD ["/lodestone-document-processor"]

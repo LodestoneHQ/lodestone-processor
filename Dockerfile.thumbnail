@@ -1,0 +1,20 @@
+FROM golang:1.15-buster AS build
+
+RUN apt-get update && apt-get install -y --no-install-recommends libmagickwand-6.q16-dev
+
+WORKDIR /lodestone-processor
+ADD go.mod ./
+ADD go.sum ./
+
+RUN go mod download
+
+ADD cmd/thumbnail-processor ./cmd/thumbnail-processor
+ADD pkg ./pkg
+
+RUN go build -o lodestone-thumbnail-processor ./cmd/thumbnail-processor/thumbnail-processor.go
+
+FROM debian:buster
+RUN apt-get update && apt-get install -y libmagickwand-6.q16-dev
+RUN sed -i 's/<policy domain="coder" rights="none" pattern="PDF" \/>//' /etc/ImageMagick-6/policy.xml
+COPY --from=build /lodestone-processor/lodestone-thumbnail-processor /usr/bin/lodestone-thumbnail-processor
+CMD ["/usr/bin/lodestone-thumbnail-processor"]
