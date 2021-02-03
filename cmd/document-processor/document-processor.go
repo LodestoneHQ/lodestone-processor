@@ -84,6 +84,7 @@ func main() {
 						c.String("elasticsearch-endpoint"),
 						c.String("elasticsearch-index"),
 						c.String("elasticsearch-mapping"),
+						c.String("ocr-language"),
 					)
 
 					if err != nil {
@@ -125,6 +126,13 @@ func main() {
 						Usage: "Path to elasticsearch mapping file. Can be used to override static/document-processor/settings.json",
 						Value: "",
 					},
+
+					&cli.StringFlag{
+						Name:  "ocr-language",
+						Usage: "OCR language override for Tika requests",
+						Value: "",
+					},
+
 					&cli.StringFlag{
 						Name:  "amqp-url",
 						Usage: "The amqp connection string",
