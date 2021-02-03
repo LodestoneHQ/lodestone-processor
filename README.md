@@ -8,10 +8,12 @@ Tasks
     - Thumbnail generation
         - output stored in minio storage
 
-# Local Development
+# How to build
 
-```
-docker build --tag=lodestone-processor .
-docker run -v `pwd`:/go/src/github.com/analogj/lodestone-processor/ lodestone-processor
+```bash
+docker build -f Dockerfile.document --tag lodestone-document-processor .
+docker run lodestone-document-processor
 
+docker build -f Dockerfile.thumbnail --tag lodestone-thumbnail-processor .
+docker run lodestone-thumbnail-processor
 ```
