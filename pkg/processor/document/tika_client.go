@@ -13,7 +13,6 @@ type TikaRoundTripper struct {
 func (mrt TikaRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
 	if r.URL.Path == "/meta" {
 		r.Header.Add("Accept", "application/json")
-		r.Header.Add("X-Tika-OCRLanguage", "ces")
 	}
 	if r.URL.Path == "/tika" {
 		r.Header.Add("Accept", "text/plain")
