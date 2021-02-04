@@ -39,12 +39,13 @@ type DocumentProcessor struct {
 	elasticsearchEndpoint        *url.URL
 	elasticsearchIndex           string
 	elasticsearchMappingOverride string
+	ocrLanguageOverride          string
 	elasticsearchClient          *elasticsearch.Client
 	filter                       *model.Filter
 	logger                       *logrus.Entry
 }
 
-func CreateDocumentProcessor(logger *logrus.Entry, apiEndpoint string, storageThumbnailBucket string, tikaEndpoint string, elasticsearchEndpoint string, elasticsearchIndex string, elasticsearchMapping string) (DocumentProcessor, error) {
+func CreateDocumentProcessor(logger *logrus.Entry, apiEndpoint string, storageThumbnailBucket string, tikaEndpoint string, elasticsearchEndpoint string, elasticsearchIndex string, elasticsearchMapping string, ocrLanguageOverride string) (DocumentProcessor, error) {
 
 	apiEndpointUrl, err := url.Parse(apiEndpoint)
 	if err != nil {
@@ -74,6 +75,7 @@ func CreateDocumentProcessor(logger *logrus.Entry, apiEndpoint string, storageTh
 		elasticsearchEndpoint:        elasticsearchEndpointUrl,
 		elasticsearchIndex:           elasticsearchIndex,
 		elasticsearchMappingOverride: elasticsearchMapping,
+		ocrLanguageOverride:          ocrLanguageOverride,
 		filter:                       &filterData,
 		logger:                       logger,
 	}
@@ -166,7 +168,7 @@ func (dp *DocumentProcessor) Process(body []byte) error {
 func (dp *DocumentProcessor) tikaHttpClient() *http.Client {
 	client := &http.Client{
 		Timeout:   time.Minute * 5, //5 minutes max to process documents.
-		Transport: TikaRoundTripper{r: http.DefaultTransport},
+		Transport: TikaRoundTripper{r: http.DefaultTransport, ocrLanguageOverride: dp.ocrLanguageOverride},
 	}
 
 	return client
