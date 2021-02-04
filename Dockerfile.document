@@ -16,5 +16,6 @@ RUN pkger -o pkg/processor/document
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o lodestone-document-processor ./cmd/document-processor/document-processor.go
 
 FROM scratch
+RUN mkdir /tmp
 COPY --from=build /lodestone-processor/lodestone-document-processor /lodestone-document-processor
 CMD ["/lodestone-document-processor"]
